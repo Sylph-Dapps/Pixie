@@ -2,29 +2,33 @@ pragma solidity >=0.4.21 <0.6.0;
 
 contract Pixie {
 
-  uint constant numColumns = 16;
-  uint constant numRows = 16;
+  uint8 constant numColumns = 16;
+  uint8 constant numRows = 16;
 
-  bytes3[256] public colors;
+  uint24[numColumns * numRows] public colors;
+
+  event ColorSetEvent(uint8 row, uint8 column, uint24 color);
 
   constructor() public {
-    for(uint i = 0; i < numRows; i++) {
-      for(uint j = 0; j < numColumns; j++) {
+    for(uint8 i = 0; i < numRows; i++) {
+      for(uint8 j = 0; j < numColumns; j++) {
         setColor(i, j, 0xffffff);
       }
     }
   }
 
-  function getAllColors() public view returns (bytes3[256] memory _colors) {
+  function getAllColors() public view returns (uint24[numColumns * numRows] memory _colors) {
     return colors;
   }
 
-  function getColor(uint row, uint column) public view returns (bytes3 color) {
+  function getColor(uint8 row, uint8 column) public view returns (uint24 color) {
     return colors[row * numColumns + column];
   }
 
 
-  function setColor(uint row, uint column, bytes3 color) public {
+  function setColor(uint8 row, uint8 column, uint24 color) public {
     colors[row * numColumns + column] = color;
+
+    emit ColorSetEvent(row, column, color);
   }
 }

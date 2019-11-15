@@ -111,7 +111,7 @@ html {
 
   .content {
     padding: 20px;
-    margin-bottom: 190px;
+    margin-bottom: 40px;
     text-align: center;
     
     .distractor {
@@ -126,32 +126,26 @@ html {
       display: inline-block;
       background: white;
       box-shadow: 5px 5px rgba(0,0,0,.5);
+
+      &.palette-box {
+        padding-right: 5px; // Compensate for the margin-right on the palette-items
+      }
     }
     
     .board {
-      margin-bottom: 20px;
-      //border: 1px solid black;
-      display: inline-block;
+      margin: 0 auto 20px auto;
       box-shadow: 5px 5px rgba(0,0,0,.5);
+      width: 402px; // 16 cells each 25 px wide + 2 for the
       
       .row {
         height: 26px;
+        position: relative;
 
-        margin-bottom: -1px;
-  
         .cell {
-          display: inline-flex;
-          align-items: flex-start;
-          justify-content: center;
-
-          margin-left: -1px;
-
-          width: 26px;
-          height: 26px;
+          width: 25px; // 25px + 1px for the border
+          height: 25px;
           cursor: pointer;
-          box-sizing: border-box;
-          overflow:hidden;
-          border: .5px solid black;
+          border: 1px solid black;
         }
       }
     }

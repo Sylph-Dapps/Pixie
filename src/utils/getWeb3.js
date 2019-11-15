@@ -3,7 +3,6 @@ import Web3 from "web3";
 const getWeb3 = () => {
   const promise = new Promise(async (resolve, reject) => {
     // Modern dapp browsers...
-    /*
     if (window.ethereum) {
       const web3 = new Web3(window.ethereum);
       try {
@@ -23,14 +22,15 @@ const getWeb3 = () => {
       resolve(web3);
     }
     // Fallback to localhost; use dev console port by default...
-    else {*/
-      const provider = new Web3.providers.HttpProvider(
-        "http://192.168.1.10:7545"
+    else {
+      const provider = new Web3.providers.WebsocketProvider(
+        //"ws://192.168.1.10:7545"
+        "wss://ropsten.infura.io/ws/v3/786ade30f36244469480aa5c2bf0743b" // From https://github.com/floating/eth-provider
       );
       const web3 = new Web3(provider);
       console.log("No web3 instance injected, using Local web3.");
       resolve(web3);
-    //}
+    }
   });
   return promise;
 }
