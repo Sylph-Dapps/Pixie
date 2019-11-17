@@ -110,9 +110,7 @@ html {
   }
 
   .content {
-    padding: 20px;
     margin-bottom: 40px;
-    text-align: center;
     
     .distractor {
       text-align: center;
@@ -129,6 +127,7 @@ html {
 
       &.palette-box {
         padding-right: 5px; // Compensate for the margin-right on the palette-items
+        padding: 5px;
       }
     }
     
@@ -146,35 +145,32 @@ html {
           height: 25px;
           cursor: pointer;
           border: 1px solid black;
+          text-align: center;
         }
       }
     }
 
     .palette {
-      width: 385px;
       display: inline-flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: flex-start;
 
+      
       .palette-item-container {
-        width: 30px;
-        height: 30px;
+        width: 35px;
+        height: 35px;
 
         display: flex;
         align-items: center;
         justify-content: center;
 
-        &:not(:last-child) {
-          margin-right: 5px;
-        }
-
         .palette-item {
-          width: 25px;
-          height: 25px;
+          width: 30px;
+          height: 30px;
           display: inline-block;
           cursor: pointer;
-          border-radius: 50px;
+          border-radius: 25px;
         }
       }
       

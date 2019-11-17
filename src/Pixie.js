@@ -1,15 +1,13 @@
 import React from 'react';
 import PixieAbi from 'abis/Pixie.json'
-import getWeb3 from 'utils/getWeb3'
+import getWeb3, { getViewOnlyWeb3 } from 'utils/getWeb3'
 
 import './Pixie.scss';
-
-let web3;
 
 const NUMBER_COLUMNS = 16;
 
 const palette = [
-  "#000000","#fcfcfc","#f8f8f8","#bcbcbc","#7c7c7c","#a4e4fc","#3cbcfc","#0078f8","#0000fc","#b8b8f8","#6888fc","#0058f8","#0000bc","#d8b8f8","#9878f8","#6844fc","#4428bc","#f8b8f8","#f878f8","#d800cc","#940084","#f8a4c0","#f85898","#e40058","#a80020","#f0d0b0","#f87858","#f83800","#a81000","#fce0a8","#fca044","#e45c10","#881400","#f8d878","#f8b800","#ac7c00","#503000","#d8f878","#b8f818","#00b800","#007800","#b8f8b8","#58d854","#00a800","#006800","#b8f8d8","#58f898","#00a844","#005800","#00fcfc","#00e8d8","#008888","#004058","#f8d8f8","#787878"
+  '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#000000','#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#000000','#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8','#F85898','#F87858','#FCA044','#F8B800','#B8F818','#58D854','#58F898','#00E8D8','#787878','#FCFCFC','#A4E4FC','#B8B8F8','#D8B8F8','#F8B8F8','#F8A4C0','#F0D0B0','#FCE0A8','#F8D878','#D8F878','#B8F8B8','#B8F8D8','#00FCFC','#BCBCBC'
 ];
 
 const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
@@ -20,63 +18,61 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    this.simpleStorage = null;
+    this.viewOnlyPixieContract = null;
+    this.writtablePixieContract = null;
     this.state = {
       loading: true,
       rows: [[]], // Array of array of hex colors prefixed with #
-      selectedColor: palette[0], // Prefixed with #
+      selectedColorIndex: 0,
       pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is always true. If the key is missing, that cell is not pending
     };
   }
 
-  componentDidMount() {
-     this.connectWeb3();
-  }
+  async componentDidMount() {
+    const viewOnlyWeb3 = await getViewOnlyWeb3();
+    this.viewOnlyPixieContract = await this.initializeContract(viewOnlyWeb3);
 
-  connectWeb3 = async () => {
-    try {
-      
-
-      web3 = await getWeb3();
-      if(window.ethereum && window.ethereum.on) {
-        window.ethereum.on('accountsChanged', accounts => {
-          this.setState({
-            address: accounts[0]
-          });
-        });
-      }
-
-      console.log(window.ethereum, window.web3)
-
-      const accounts = await web3.eth.getAccounts();
-      console.log(accounts);
-      this.setState({
-        address: accounts[0]
-      });
-
-    } catch (error) {
-      alert("Failed to load web3 or accounts. Check console for details.");
-      console.log(error);
-    }
-
-    await this.initializeContract();
-  };
-
-  initializeContract = async () => {
-    const TruffleContract = require("@truffle/contract");
-    const pixieTruffleContract = TruffleContract(PixieAbi);
-    pixieTruffleContract.setProvider(web3.currentProvider);
-    this.pixieContract = await pixieTruffleContract.at("0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"); // Ropsten
-    
-    this.pixieContract.ColorSetEvent().on('data', (error, response) => {
+    this.viewOnlyPixieContract.ColorSetEvent().on('data', (error, response) => {
       this.loadColors();
     })
 
     this.loadColors();
+  }
+
+  connectWrittableWeb3 = async () => {
+    try {
+      const web3 = await getWeb3();
+      if(window.ethereum && window.ethereum.on) {
+        window.ethereum.on('accountsChanged', accounts => {
+          this.address = accounts[0];
+        });
+      }
+
+      const accounts = await web3.eth.getAccounts();
+      this.address = accounts[0];
+
+      this.writtablePixieContract = await this.initializeContract(web3);
+
+    } catch (error) {
+      if(error.code === 4001) {
+        console.log("In order to draw, allow your wallet to connect to Pixie");
+      } else {
+        alert("Failed to load web3 or accounts. Check console for details.");
+        console.log(error);
+      }
+    }
+  };
+
+  initializeContract = async web3 => {
+    const TruffleContract = require("@truffle/contract");
+    const pixieTruffleContract = TruffleContract(PixieAbi);
+    pixieTruffleContract.setProvider(web3.currentProvider);
+    const pixieContract = await pixieTruffleContract.at("0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"); // Ropsten
+    return pixieContract;
   };
 
   loadColors = async () => {
-    const colors = await this.pixieContract.getAllColors();
+    const colors = await this.viewOnlyPixieContract.getAllColors();
 
     const rows = [[]];
     for(let a = 0; a < colors.length; a++) {
@@ -95,13 +91,20 @@ class App extends React.Component {
     });
   };
 
-  selectColor = color => {
+  selectColorByIndex = index => {
     this.setState({
-      selectedColor: color,
+      selectedColorIndex: index,
     });
   };
 
   paintCell = async (row, column, color) => {
+    if(!this.writtablePixieContract) {
+      await this.connectWrittableWeb3();
+      if(!this.writtablePixieContract) {
+        return;
+      }
+    }
+
     let pendingCells = { ...this.state.pendingCells };
     pendingCells[row + "," + column] = true;
     this.setState({
@@ -109,8 +112,8 @@ class App extends React.Component {
     });
 
     const newColor = cssHexToInt(color);
-    const setColorPromise = this.pixieContract.setColor(row, column, newColor, {
-      from: this.state.address
+    const setColorPromise = this.writtablePixieContract.setColor(row, column, newColor, {
+      from: this.address
     });
     setColorPromise.on('transactionHash', hash => {
       console.log('transactionHash')
@@ -151,6 +154,7 @@ class App extends React.Component {
     const {
       rows,
       loading,
+      selectedColorIndex,
     } = this.state;
 
     return (
@@ -180,7 +184,7 @@ class App extends React.Component {
                           return (
                             <div className="cell"
                               key={j}
-                              onClick={() => this.paintCell(i, j, this.state.selectedColor)}
+                              onClick={() => this.paintCell(i, j, palette[selectedColorIndex])}
                               style={style}>{content}</div>
                           );
                         }) }
@@ -196,14 +200,14 @@ class App extends React.Component {
                       backgroundColor: paletteColor,
                       border: "1px solid black",
                     };
-                    if(this.state.selectedColor === paletteColor) {
+                    if(i === this.state.selectedColorIndex) {
                       style.border = "3px solid red";
                     }
                     return (
                       <div className="palette-item-container" key={i}>
                         <div className="palette-item"
                           style={style}
-                          onClick={() => this.selectColor(paletteColor)}
+                          onClick={() => this.selectColorByIndex(i)}
                         ></div>
                       </div>
                     );
