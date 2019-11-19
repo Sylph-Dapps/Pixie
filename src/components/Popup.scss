@@ -1,0 +1,63 @@
+@import "assets/colors.scss";
+
+@media (min-width: 480px) {
+  .Popup {
+    font-size: 20px;
+  }
+}
+
+.Popup {
+  &.modal-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(8, 79, 103, .25);
+    z-index: 100;
+    overflow: auto;
+    padding: 40px 60px;
+  }
+
+  .window {
+    background: $form-background-color;
+    border: 1px solid $theme-color;
+    box-shadow: 5px 5px $shadow-color;
+    color: $form-text-color;
+    max-width: 600px;
+    position: relative;
+    margin: 0px auto;
+    animation: appear 0.5s;
+
+    .window-header {
+      display: flex;
+      padding: 10px;
+
+      .title {
+        flex-grow: 1;
+        padding-left: 10px;
+        font-weight: bold;
+      }
+
+      .close-button {
+        cursor: pointer;
+        user-select: none;
+        font-weight: bold;
+      }
+    }
+
+    .window-content {
+      padding-right: 20px;
+      padding-left: 20px;
+      padding-bottom: 20px;
+
+      p {
+        margin: 0;
+        padding: 0;
+        &:not(:last-child) {
+          margin-bottom: 20px;
+        }
+      }
+    }
+  }
+}

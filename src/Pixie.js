@@ -1,6 +1,11 @@
 import React from 'react';
-import PixieAbi from 'abis/Pixie.json'
-import getWeb3, { getViewOnlyWeb3 } from 'utils/getWeb3'
+import PixieAbi from 'abis/Pixie.json';
+import {
+  getWeb3,
+  hasWeb3,
+  getViewOnlyWeb3
+} from 'utils/getWeb3';
+import Popup from 'components/Popup';
 
 import './Pixie.scss';
 
@@ -14,6 +19,18 @@ const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
 
 const intToCSSHex = int => "#" + int.toString(16).padStart(6, "0");
 
+const colorArrayToRows = colors => {
+  const rows = [];
+  for(let a = 0; a < colors.length; a++) {
+    if(a % NUMBER_COLUMNS === 0) {
+      rows.push([]);
+    }
+    const color = intToCSSHex(colors[a].toNumber());
+    rows[rows.length - 1].push(color);
+  }
+  return rows;
+};
+
 class App extends React.Component {
 
   constructor(props) {
@@ -25,6 +42,7 @@ class App extends React.Component {
       rows: [[]], // Array of array of hex colors prefixed with #
       selectedColorIndex: 0,
       pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is always true. If the key is missing, that cell is not pending
+      web3WarningVisible: false,
     };
   }
 
@@ -36,7 +54,10 @@ class App extends React.Component {
       this.loadColors();
     })
 
-    this.loadColors();
+    await this.loadColors();
+    this.setState({
+      loading: false,
+    });
   }
 
   connectWrittableWeb3 = async () => {
@@ -54,7 +75,7 @@ class App extends React.Component {
       this.writtablePixieContract = await this.initializeContract(web3);
 
     } catch (error) {
-      if(error.code === 4001) {
+      if(error && error.code === 4001) {
         console.log("In order to draw, allow your wallet to connect to Pixie");
       } else {
         alert("Failed to load web3 or accounts. Check console for details.");
@@ -73,21 +94,9 @@ class App extends React.Component {
 
   loadColors = async () => {
     const colors = await this.viewOnlyPixieContract.getAllColors();
-
-    const rows = [[]];
-    for(let a = 0; a < colors.length; a++) {
-      const color = intToCSSHex(colors[a].toNumber());
-      rows[rows.length - 1].push(color);
-
-      // If we're at the end of any row except for the last one, add a new row
-      if(rows[rows.length - 1].length === NUMBER_COLUMNS && a !== colors.length - 1) {
-        rows.push([]);
-      }
-    }
-    
+    const rows = colorArrayToRows(colors);
     this.setState({
       rows,
-      loading: false,
     });
   };
 
@@ -99,17 +108,19 @@ class App extends React.Component {
 
   paintCell = async (row, column, color) => {
     if(!this.writtablePixieContract) {
-      await this.connectWrittableWeb3();
-      if(!this.writtablePixieContract) {
+      if(hasWeb3()) {
+        await this.connectWrittableWeb3();
+        console.log(this.writtablePixieContract)
+        if(!this.writtablePixieContract) {
+          console.log("Doing this") 
+        }
+      } else {
+        this.showWeb3Warning();
         return;
       }
     }
 
-    let pendingCells = { ...this.state.pendingCells };
-    pendingCells[row + "," + column] = true;
-    this.setState({
-      pendingCells,
-    });
+    this.setPendingCell(row, column);
 
     const newColor = cssHexToInt(color);
     const setColorPromise = this.writtablePixieContract.setColor(row, column, newColor, {
@@ -139,16 +150,40 @@ class App extends React.Component {
     
     await this.loadColors();
 
-    await this.clearPendingCell(row, column);
+    this.clearPendingCell(row, column);
   }
 
-  clearPendingCell = (row, column) => {
-    const pendingCells = { ...this.state.pendingCells };
-    delete pendingCells[row + "," + column] ;
+  setPendingCell = (row, column) => {
+    let pendingCells = { ...this.state.pendingCells };
+    pendingCells[row + "," + column] = true;
     this.setState({
       pendingCells,
     });
   };
+
+  clearPendingCell = (row, column) => {
+    const pendingCells = { ...this.state.pendingCells };
+    delete pendingCells[row + "," + column];
+    this.setState({
+      pendingCells,
+    });
+  };
+
+  showWeb3Warning = () => {
+    this.setState({ 
+      web3WarningVisible: true
+    });
+
+    // Don't allow the page to be scrolled while the popup is open. It will handle scrolling its own content, and we don't want two scroll bars.
+    document.getElementsByTagName("html")[0].style = "overflow:hidden";
+  }
+
+  hideWeb3Warning = () => {
+    this.setState({ 
+      web3WarningVisible: false
+    });
+    document.getElementsByTagName("html")[0].style = "overflow:auto";
+  }
 
   render() {
     const {
@@ -217,6 +252,18 @@ class App extends React.Component {
             </React.Fragment>
           }
         </div>
+        { this.state.web3WarningVisible &&
+          <Popup title="Hold up"
+            onClose={this.hideWeb3Warning}>
+            <p>
+              To paint on Pixie, you need to use a Ethereum-enabled browser, like <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+              If you're using Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
+            </p>
+            <p>
+              Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+            </p>
+          </Popup>
+        }
       </div>
     );
   }

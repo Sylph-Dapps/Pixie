@@ -1,7 +1,4 @@
-$theme-color: rgb(36, 125, 186);
-$form-background-color: white;
-$form-text-color: black;
-$shadow-color: rgba(0,0,0,.5);
+@import "assets/colors.scss";
 
 @media (max-width: 480px) {
   html {

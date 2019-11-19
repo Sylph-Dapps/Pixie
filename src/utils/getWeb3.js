@@ -1,5 +1,9 @@
 import Web3 from "web3";
 
+const hasWeb3 = () => {
+  return window.ethereum || window.web3;
+}
+
 const getWeb3 = () => {
   const promise = new Promise(async (resolve, reject) => {
     // Modern dapp browsers...
@@ -21,7 +25,11 @@ const getWeb3 = () => {
       console.log("Injected web3 detected.");
       resolve(web3);
     }
+    else {
+      reject({});
+    }
     // Fallback to localhost; use dev console port by default...
+    /*
     else {
       const provider = new Web3.providers.WebsocketProvider(
         //"ws://192.168.1.10:7545"
@@ -31,6 +39,7 @@ const getWeb3 = () => {
       console.log("No web3 instance injected, using Local web3.");
       resolve(web3);
     }
+    */
   });
   return promise;
 };
@@ -44,5 +53,9 @@ const getViewOnlyWeb3 = async () => {
   return await web3;
 };
 
+export { 
+  getWeb3,
+  hasWeb3,
+  getViewOnlyWeb3
+};
 export default getWeb3;
-export { getViewOnlyWeb3} ;
