@@ -5,8 +5,8 @@ import './Popup.scss';
 class Popup extends React.Component {
 
   handleClick = event => {
-    // Close the window if the user clicked the modal background or the close button
-    if(['Popup modal-background', 'close-button'].indexOf(event.target.className) !== -1) {
+    // Close the window if the user clicked the close button
+    if(['close-button'].indexOf(event.target.className) !== -1) {
       this.props.onClose();
     }
   }
