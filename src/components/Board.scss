@@ -1,0 +1,25 @@
+.Board {
+  margin: 0 auto 20px auto;
+  display: flex;
+  
+  .board-content {
+    margin:0px auto;
+    overflow: auto;
+    box-shadow: 5px 5px rgba(0,0,0,.5);
+  }
+  
+  .row {
+    display: flex;
+
+    .cell {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      &:not(:last-child) {
+        margin-right: -1px;
+      }
+    }
+  }
+}

@@ -5,6 +5,8 @@ import {
   hasWeb3,
   getViewOnlyWeb3
 } from 'utils/getWeb3';
+import Board from 'components/Board';
+import Palette from 'components/Palette';
 import Popup from 'components/Popup';
 
 import './Pixie.scss';
@@ -28,6 +30,10 @@ const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
 
 const intToCSSHex = int => "#" + int.toString(16).padStart(6, "0");
 
+/**
+ * Returns an array of arrays of CSS hex strings that represent the grid of colors to draw on the board.
+ * @param {Array} colors - Array of BigNumbers that represent colors
+ */
 const colorArrayToRows = colors => {
   const rows = [];
   for(let a = 0; a < colors.length; a++) {
@@ -61,8 +67,11 @@ class App extends React.Component {
     const viewOnlyWeb3 = await getViewOnlyWeb3();
     this.viewOnlyPixieContract = await this.initializeContract(viewOnlyWeb3);
 
-    this.viewOnlyPixieContract.ColorSetEvent().on('data', (error, response) => {
-      this.loadColors();
+    this.viewOnlyPixieContract.ColorSetEvent().on('data', event => {
+      const row = event.args.row.toNumber();
+      const column = event.args.column.toNumber();
+      const color = intToCSSHex(event.args.color.toNumber());
+      this.setCellColor(row, column, color);
     })
 
     await this.loadColors();
@@ -142,8 +151,8 @@ class App extends React.Component {
     });
     setColorPromise.on('receipt', receipt => {
       console.log("receipt")
+      this.setCellColor(row, column, color);
       this.clearPendingCell(row, column);
-      this.loadColors();
     })
     setColorPromise.on('error', error => {
       this.clearPendingCell(row, column);
@@ -154,11 +163,19 @@ class App extends React.Component {
       console.log(error);
     });
 
-    this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
+    //this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
     await setColorPromise;
 
     console.log("promise resolved")
   }
+
+  setCellColor = (row, column, color) => {
+    const newRows = [ ...this.state.rows ];
+    newRows[row][column] = color;
+    this.setState({
+      rows: newRows,
+    });
+  };
 
   setPendingCell = (row, column) => {
     let pendingCells = { ...this.state.pendingCells };
@@ -196,13 +213,13 @@ class App extends React.Component {
     const {
       rows,
       loading,
+      pendingCells,
       selectedColorIndex,
+      currentWarning,
     } = this.state;
 
-    console.log(this.state.currentWarning);
-
     let etherscanURL = null;
-    if(this.state.currentWarning === Warnings.TRANSACTION_SUBMITTED) {
+    if(currentWarning === Warnings.TRANSACTION_SUBMITTED) {
       etherscanURL = `https://ropsten.etherscan.io/tx/${this.mostRecentTransactionHash}`;
     }
 
@@ -214,62 +231,24 @@ class App extends React.Component {
           <p>By <a href="https://michaelvandaniker.com">Michael VanDaniker</a></p>
         </header>
         <div className="content">
-          { loading && <div className="distractor">Loading...</div> }
+          { loading &&
+            <div className="distractor">Loading...</div>
+          }
           { !loading &&
             <React.Fragment>
-              <div className="board">
-                { rows.map( (row, i) => {
-                    return (
-                      <div className="row" key={i}>
-                        { row.map( (cellColor, j) => {
-                          const style = {
-                            backgroundColor: cellColor,
-                            color: cellColor === "#000000" ? "white" : "black",
-                            position: 'absolute',
-                            left: (25 * j) + 'px',
-                            top: '0px',
-                          };
-                          const content = this.state.pendingCells[i + "," + j] ? "..." : "";
-                          return (
-                            <div className="cell"
-                              key={j}
-                              onClick={() => this.paintCell(i, j, palette[selectedColorIndex])}
-                              style={style}>{content}</div>
-                          );
-                        }) }
-                      </div>
-                    )
-                  }
-                )}
-              </div>
-              <div className="box palette-box">
-                <div className="palette">
-                  { palette.map( (paletteColor, i) => {
-                    const style = {
-                      backgroundColor: paletteColor,
-                      border: "1px solid black",
-                    };
-                    if(i === this.state.selectedColorIndex) {
-                      style.border = "3px solid red";
-                    }
-                    return (
-                      <div className="palette-item-container" key={i}>
-                        <div className="palette-item"
-                          style={style}
-                          onClick={() => this.selectColorByIndex(i)}
-                        ></div>
-                      </div>
-                    );
-                  }) }
-                </div>
-              </div>
+              <Board rows={rows}
+                pendingCells={pendingCells}
+                onCellClick={(row, column) => this.paintCell(row, column, palette[selectedColorIndex])}/>
+              <Palette colors={palette}
+                selectedColorIndex={selectedColorIndex}
+                onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>
             </React.Fragment>
           }
         </div>
-        { this.state.currentWarning &&
-          <Popup title="Hold up"
+        { currentWarning &&
+          <Popup title=""
             onClose={this.hideCurrentWarning}>
-            { this.state.currentWarning === Warnings.WEB3_MISSING &&
+            { currentWarning === Warnings.WEB3_MISSING &&
               <div>
                 <p>
                   To paint on Pixie, you need to use a Ethereum-enabled browser, like <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
@@ -280,21 +259,21 @@ class App extends React.Component {
                 </p>
               </div>
             }
-            { this.state.currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
+            { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
               <p>Pixie has submitted a connection request to your wallet. Please approve the request. If you're using Metamask and you don't see the request, click the Metamask button next to your address bar.</p>
             }
-            { this.state.currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
+            { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
               <p>In order to paint, you need to allow your wallet to connect to Pixie. Please try again and allow the connection.</p>
             }
-            { this.state.currentWarning === Warnings.TRANSACTION_APPROVAL_PENDING &&
+            { currentWarning === Warnings.TRANSACTION_APPROVAL_PENDING &&
               <p>Please sign the transaction in your wallet. If you're using Metamask and you don't see the approval request, click the Metamask button next to your address bar.</p>
             }
-            { this.state.currentWarning === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
-              <p>In order to paint, you must sign the transaction. If you rejected the signature request by accident, you can try again by clicking on the cell you want to paint.</p>
+            { currentWarning === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
+              <p>In order to paint, you must sign the transaction. If you rejected the signature request by accident, you can try again by clicking on the pixel you want to paint.</p>
             }
-            { this.state.currentWarning === Warnings.TRANSACTION_SUBMITTED &&
+            { currentWarning === Warnings.TRANSACTION_SUBMITTED &&
               <div>
-                <p>Your transaction has been submitted! Once it's mined, your cell will be updated with the color you selected.</p>
+                <p>Your transaction has been submitted! Once it's mined, your pixel will be updated with the color you selected.</p>
                 <p>You can view the status of your transaction on <a href={etherscanURL} target="_blank" rel="noopener noreferrer">Etherescan</a>.</p>
               </div>
             }

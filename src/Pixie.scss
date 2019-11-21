@@ -38,11 +38,14 @@
 }
 
 html {
+  overflow-x:hidden;
+
   body {
     margin: 0;
     padding: 0;
     height: 100%;
     color: white;
+    overflow-x:hidden;
   }
   a {
     color: $theme-color;
@@ -78,9 +81,8 @@ html {
 }
 
 .Pixie {
-  width: 500px;
   margin: 0px auto;
-
+  
   header {
     color: white;
     text-align: center;
@@ -108,69 +110,14 @@ html {
 
   .content {
     margin-bottom: 40px;
+    margin-left: 20px;
+    margin-right: 20px;
+    
     
     .distractor {
       text-align: center;
       font-size: 2em;
       text-shadow: 3px 3px $shadow-color;
-    }
-
-    .box {
-      margin: 0px auto;
-      padding: 10px;
-      display: inline-block;
-      background: white;
-      box-shadow: 5px 5px rgba(0,0,0,.5);
-
-      &.palette-box {
-        padding-right: 5px; // Compensate for the margin-right on the palette-items
-        padding: 5px;
-      }
-    }
-    
-    .board {
-      margin: 0 auto 20px auto;
-      box-shadow: 5px 5px rgba(0,0,0,.5);
-      width: 402px; // 16 cells each 25 px wide + 2 for the
-      
-      .row {
-        height: 26px;
-        position: relative;
-
-        .cell {
-          width: 25px; // 25px + 1px for the border
-          height: 25px;
-          cursor: pointer;
-          border: 1px solid black;
-          text-align: center;
-        }
-      }
-    }
-
-    .palette {
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-start;
-
-      
-      .palette-item-container {
-        width: 35px;
-        height: 35px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .palette-item {
-          width: 30px;
-          height: 30px;
-          display: inline-block;
-          cursor: pointer;
-          border-radius: 25px;
-        }
-      }
-      
     }
   }
 }

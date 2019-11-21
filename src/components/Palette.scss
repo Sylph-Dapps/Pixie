@@ -1,0 +1,38 @@
+.Palette {
+  max-width: 490px;
+  margin: 0px auto;
+  background: white;
+  box-shadow: 5px 5px rgba(0,0,0,.5);
+  padding: 10px;
+  overflow-x: auto;
+
+  .row {
+    display: flex;
+  }
+  
+  .palette-item-container {
+    flex-shrink: 0;
+    width: 35px;
+    height: 35px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    .palette-item {
+      border-radius: 25px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+
+      // The padding-right does work when scrolling so we use this trick:
+      // https://blog.alexandergottlieb.com/overflow-scroll-and-the-right-padding-problem-a-css-only-solution-6d442915b3f4
+      &:last-child:after {
+        content: "";
+        display: block;
+        width: 40px; // .palette-item width + the padding for the .Palette
+        height: 1px;
+      } 
+    }
+  }
+}
