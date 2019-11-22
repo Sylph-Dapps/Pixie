@@ -5,11 +5,18 @@ import {
   hasWeb3,
   getViewOnlyWeb3
 } from 'utils/getWeb3';
+import isMobileOrTablet from 'utils/isMobileOrTablet';
 import Board from 'components/Board';
 import Palette from 'components/Palette';
 import Popup from 'components/Popup';
 
 import './Pixie.scss';
+
+const LoadingStatus = {
+  LOADING: "LOADING",
+  LOADED: "LOADED",
+  ERRORED: "ERRORED",
+}
 
 const Warnings = {
   WEB3_MISSING: "WEB3_MISSING",
@@ -20,9 +27,13 @@ const Warnings = {
   TRANSACTION_SUBMITTED: "TRANSACTION_SUBMITTED",
 };
 
+const CONTRACT_ADDRESS = "0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"; // Ropsten
+
+const ETHERSCAN_HOSTNAME = "ropsten.etherscan.io";
+
 const NUMBER_COLUMNS = 16;
 
-const palette = [
+const PALETTE_COLORS = [
   '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#000000','#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#000000','#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8','#F85898','#F87858','#FCA044','#F8B800','#B8F818','#58D854','#58F898','#00E8D8','#787878','#FCFCFC','#A4E4FC','#B8B8F8','#D8B8F8','#F8B8F8','#F8A4C0','#F0D0B0','#FCE0A8','#F8D878','#D8F878','#B8F8B8','#B8F8D8','#00FCFC','#BCBCBC'
 ];
 
@@ -46,7 +57,26 @@ const colorArrayToRows = colors => {
   return rows;
 };
 
-let writtableWeb3;
+const updateFavicon = rows => {
+  const favicon = document.getElementById('favicon');
+
+  const faviconSize = NUMBER_COLUMNS;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = faviconSize;
+  canvas.height = faviconSize;
+
+  const ctx = canvas.getContext('2d');
+
+  for(let a = 0; a < rows.length; a++) {
+    for(let b = 0; b < rows[a].length; b++) {
+      ctx.fillStyle = rows[a][b];
+      ctx.fillRect(b, a, 1, 1);
+    }
+  }
+
+  favicon.href = canvas.toDataURL('image/png');
+};
 
 class App extends React.Component {
 
@@ -54,18 +84,29 @@ class App extends React.Component {
     super(props);
     this.viewOnlyPixieContract = null;
     this.writtablePixieContract = null;
+    this.writtableWeb3 = null;
+    this.showTransactionApprovalPopups = !isMobileOrTablet();
     this.state = {
-      loading: true,
+      loadingStatus: LoadingStatus.LOADING,
       rows: [[]], // Array of array of hex colors prefixed with #
       selectedColorIndex: 0,
       pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is always true. If the key is missing, that cell is not pending
       currentWarning: null,
+      mostRecentTransactionHash: null,
     };
   }
 
   async componentDidMount() {
-    const viewOnlyWeb3 = await getViewOnlyWeb3();
-    this.viewOnlyPixieContract = await this.initializeContract(viewOnlyWeb3);
+    try {
+      const viewOnlyWeb3 = await getViewOnlyWeb3();
+      this.viewOnlyPixieContract = await this.initializeContract(viewOnlyWeb3);
+    } catch (e) {
+      console.error(e);
+      this.setState({
+        loadingStatus: LoadingStatus.ERRORED,
+      });
+      return;
+    }
 
     this.viewOnlyPixieContract.ColorSetEvent().on('data', event => {
       const row = event.args.row.toNumber();
@@ -76,7 +117,7 @@ class App extends React.Component {
 
     await this.loadColors();
     this.setState({
-      loading: false,
+      loadingStatus: LoadingStatus.LOADED,
     });
   }
 
@@ -92,20 +133,19 @@ class App extends React.Component {
 
     try {
       this.showWarning(Warnings.WALLET_CONNECTION_APPOVAL_PENDING);
-      writtableWeb3 = await getWeb3();
+      this.writtableWeb3 = await getWeb3();
       this.hideCurrentWarning();
     } catch (error) {
       if(error && error.code === 4001) {
         this.showWarning(Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED);
         return;
       } else {
-        alert("Failed to load web3 or accounts. Check console for details.");
-        console.log(error);
+        console.error(error);
         return;
       }
     }
 
-    this.writtablePixieContract = await this.initializeContract(writtableWeb3);
+    this.writtablePixieContract = await this.initializeContract(this.writtableWeb3);
     return this.writtablePixieContract;
   };
 
@@ -113,13 +153,16 @@ class App extends React.Component {
     const TruffleContract = require("@truffle/contract");
     const pixieTruffleContract = TruffleContract(PixieAbi);
     pixieTruffleContract.setProvider(web3.currentProvider);
-    const pixieContract = await pixieTruffleContract.at("0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"); // Ropsten
+    const pixieContract = await pixieTruffleContract.at(CONTRACT_ADDRESS);
     return pixieContract;
   };
 
   loadColors = async () => {
     const colors = await this.viewOnlyPixieContract.getAllColors();
     const rows = colorArrayToRows(colors);
+
+    updateFavicon(rows);
+
     this.setState({
       rows,
     });
@@ -139,34 +182,36 @@ class App extends React.Component {
 
     this.setPendingCell(row, column);
 
-    const accounts = await writtableWeb3.eth.getAccounts();
+    const accounts = await this.writtableWeb3.eth.getAccounts();
 
     const newColor = cssHexToInt(color);
     const setColorPromise = contract.setColor(row, column, newColor, {
       from: accounts[0]
     });
     setColorPromise.on('transactionHash', hash => {
-      this.mostRecentTransactionHash = hash;
-      this.showWarning(Warnings.TRANSACTION_SUBMITTED);
+      this.setState({
+        mostRecentTransactionHash: hash,
+      }, () => {
+        this.showWarning(Warnings.TRANSACTION_SUBMITTED)
+      });
     });
     setColorPromise.on('receipt', receipt => {
-      console.log("receipt")
       this.setCellColor(row, column, color);
       this.clearPendingCell(row, column);
     })
     setColorPromise.on('error', error => {
       this.clearPendingCell(row, column);
-      if(error.code === 4001) {
+      if(error.code === 4001 && this.showTransactionApprovalPopups) {
         this.showWarning(Warnings.TRANSACTION_APPROVAL_REQUIRED);
+      } else {
+        console.error(error);
       }
-      console.log("error")
-      console.log(error);
     });
 
-    //this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
+    if(this.showTransactionApprovalPopups) {
+      this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
+    }
     await setColorPromise;
-
-    console.log("promise resolved")
   }
 
   setCellColor = (row, column, color) => {
@@ -174,6 +219,8 @@ class App extends React.Component {
     newRows[row][column] = color;
     this.setState({
       rows: newRows,
+    }, () => {
+      updateFavicon(this.state.rows);
     });
   };
 
@@ -209,19 +256,78 @@ class App extends React.Component {
     document.getElementsByTagName("html")[0].style = "overflow:auto";
   }
 
+  renderWarning = currentWarning => {
+    let transactionUrl = null;
+    if(currentWarning === Warnings.TRANSACTION_SUBMITTED) {
+      transactionUrl = `https://${ETHERSCAN_HOSTNAME}/tx/${this.state.mostRecentTransactionHash}`;
+    }
+
+    return (
+      <React.Fragment>
+        { currentWarning === Warnings.WEB3_MISSING &&
+          <Popup title="Hold up"
+            onClose={this.hideCurrentWarning}>
+            <p>
+              To paint on Pixie, you need to use a Ethereum-enabled browser, like <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+              If you're using Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
+            </p>
+            <p>
+              Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+            </p>
+          </Popup>
+        }
+        { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
+          <Popup title="Please let Pixie view your Ethereum account's address"
+            onClose={this.hideCurrentWarning}>
+            <p>Pixie has submitted a request to view your Ethereum account's address. In order to paint a pixel, you must approve the request.</p>
+            { !isMobileOrTablet() &&
+              <p>If you do not see the request, click your wallet's icon next to your address bar.</p>
+            }
+          </Popup>
+        }
+        { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
+          <Popup title="Hold up"
+            onClose={this.hideCurrentWarning}>
+            <p>In order to paint a pixel, Pixie needs to know your Ethereum address. Please click on the pixel you'd like to paint again and allow the connection.</p>
+          </Popup>
+        }
+        { currentWarning === Warnings.TRANSACTION_APPROVAL_PENDING &&
+          <Popup title="Awaiting your approval"
+            onClose={this.hideCurrentWarning}>
+            <p>Pixie has put together a transaction request that, when submitted, will store your pixel's new color to the Ethereum blockchain. Once you approve the request, your pixel is as good as painted!</p>
+            { !isMobileOrTablet() &&
+              <p>If you don't see the request, click on your wallet's logo next to your address bar.</p>
+            }
+          </Popup>
+        }
+        { currentWarning === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
+          <Popup title="Hold up"
+            onClose={this.hideCurrentWarning}>
+            <p>In order to paint that pixel, you must approve the transaction request. If you rejected the request by accident, you can click on the pixel you want to paint again.</p>
+          </Popup>
+        }
+        { currentWarning === Warnings.TRANSACTION_SUBMITTED &&
+          <Popup title="Hooray!"
+            onClose={this.hideCurrentWarning}>
+            <p>Your transaction has been submitted to the Ethereum network! Once it's mined, your pixel will be recolored for all the world to see!</p>
+            <p>The amount of time it takes for a transaction to be mined varies based on the amount of other activity currently happening on the Ethereum network. You can view the status of your transaction on <a href={transactionUrl} target="_blank" rel="noopener noreferrer">Etherscan</a>.</p>
+            <p>Feel free to paint some other pixels while you wait :)</p>
+          </Popup>
+        }
+      </React.Fragment>
+    );
+  }
+
   render() {
     const {
+      loadingStatus,
       rows,
-      loading,
       pendingCells,
       selectedColorIndex,
       currentWarning,
     } = this.state;
 
-    let etherscanURL = null;
-    if(currentWarning === Warnings.TRANSACTION_SUBMITTED) {
-      etherscanURL = `https://ropsten.etherscan.io/tx/${this.mostRecentTransactionHash}`;
-    }
+    const contractUrl = `https://${ETHERSCAN_HOSTNAME}/address/${CONTRACT_ADDRESS}`;
 
     return (
       <div className="Pixie">
@@ -231,54 +337,25 @@ class App extends React.Component {
           <p>By <a href="https://michaelvandaniker.com">Michael VanDaniker</a></p>
         </header>
         <div className="content">
-          { loading &&
+          { loadingStatus === LoadingStatus.LOADING &&
             <div className="distractor">Loading...</div>
           }
-          { !loading &&
+          { loadingStatus === LoadingStatus.ERRORED  &&
+            <div>Unabled to load Pixie :(</div>
+          }
+          { loadingStatus === LoadingStatus.LOADED  &&
             <React.Fragment>
               <Board rows={rows}
                 pendingCells={pendingCells}
-                onCellClick={(row, column) => this.paintCell(row, column, palette[selectedColorIndex])}/>
-              <Palette colors={palette}
+                onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])}/>
+              <Palette colors={PALETTE_COLORS}
                 selectedColorIndex={selectedColorIndex}
                 onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>
+              <p><a href={contractUrl} target="_blank" rel="noopener noreferrer">View contract on Etherscan</a></p>
             </React.Fragment>
           }
         </div>
-        { currentWarning &&
-          <Popup title=""
-            onClose={this.hideCurrentWarning}>
-            { currentWarning === Warnings.WEB3_MISSING &&
-              <div>
-                <p>
-                  To paint on Pixie, you need to use a Ethereum-enabled browser, like <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
-                  If you're using Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
-                </p>
-                <p>
-                  Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
-                </p>
-              </div>
-            }
-            { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
-              <p>Pixie has submitted a connection request to your wallet. Please approve the request. If you're using Metamask and you don't see the request, click the Metamask button next to your address bar.</p>
-            }
-            { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
-              <p>In order to paint, you need to allow your wallet to connect to Pixie. Please try again and allow the connection.</p>
-            }
-            { currentWarning === Warnings.TRANSACTION_APPROVAL_PENDING &&
-              <p>Please sign the transaction in your wallet. If you're using Metamask and you don't see the approval request, click the Metamask button next to your address bar.</p>
-            }
-            { currentWarning === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
-              <p>In order to paint, you must sign the transaction. If you rejected the signature request by accident, you can try again by clicking on the pixel you want to paint.</p>
-            }
-            { currentWarning === Warnings.TRANSACTION_SUBMITTED &&
-              <div>
-                <p>Your transaction has been submitted! Once it's mined, your pixel will be updated with the color you selected.</p>
-                <p>You can view the status of your transaction on <a href={etherscanURL} target="_blank" rel="noopener noreferrer">Etherescan</a>.</p>
-              </div>
-            }
-          </Popup>
-        }
+        { currentWarning && this.renderWarning(currentWarning) }
       </div>
     );
   }

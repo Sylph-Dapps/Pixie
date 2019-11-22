@@ -22,31 +22,17 @@ const getWeb3 = () => {
     else if (window.web3) {
       // Use Mist/MetaMask's provider.
       const web3 = window.web3;
-      console.log("Injected web3 detected.");
       resolve(web3);
     }
     else {
       reject({});
     }
-    // Fallback to localhost; use dev console port by default...
-    /*
-    else {
-      const provider = new Web3.providers.WebsocketProvider(
-        //"ws://192.168.1.10:7545"
-        "wss://ropsten.infura.io/ws/v3/786ade30f36244469480aa5c2bf0743b" // From https://github.com/floating/eth-provider
-      );
-      const web3 = new Web3(provider);
-      console.log("No web3 instance injected, using Local web3.");
-      resolve(web3);
-    }
-    */
   });
   return promise;
 };
 
 const getViewOnlyWeb3 = async () => {
   const provider = new Web3.providers.WebsocketProvider(
-    //"ws://192.168.1.10:7545"
     "wss://ropsten.infura.io/ws/v3/786ade30f36244469480aa5c2bf0743b" // From https://github.com/floating/eth-provider
   );
   const web3 = new Web3(provider);

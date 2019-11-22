@@ -1,8 +1,8 @@
 @import "assets/colors.scss";
 
-@media (min-width: 480px) {
+@media (min-width: 400px) {
   .Popup {
-    font-size: 20px;
+    font-size: 16px;
   }
 }
 
@@ -16,12 +16,12 @@
     background: rgba(8, 79, 103, .25);
     z-index: 100;
     overflow: auto;
-    padding: 40px 60px;
+    padding: 40px 30px;
   }
 
   .window {
     background: $form-background-color;
-    border: 1px solid $theme-color;
+    border: 1px solid black;
     box-shadow: 5px 5px $shadow-color;
     color: $form-text-color;
     max-width: 600px;
@@ -29,8 +29,13 @@
     margin: 0px auto;
     animation: appear 0.5s;
 
+    a {
+      color: $theme-color;
+    }  
+
     .window-header {
       display: flex;
+      align-items: flex-end;
       padding: 10px;
 
       .title {
@@ -42,7 +47,7 @@
       .close-button {
         cursor: pointer;
         user-select: none;
-        font-weight: bold;
+        font-size: 20px;
       }
     }
 
