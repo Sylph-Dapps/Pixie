@@ -60,24 +60,27 @@ const colorArrayToRows = colors => {
 };
 
 const updateFavicon = rows => {
-  const favicon = document.getElementById('favicon');
-
-  const faviconSize = NUMBER_COLUMNS;
-
   const canvas = document.createElement('canvas');
-  canvas.width = faviconSize;
-  canvas.height = faviconSize;
+  drawRowsToCanvas(canvas, rows);
+  const favicon = document.getElementById('favicon');
+  favicon.href = canvas.toDataURL('image/png');
+};
 
+const drawRowsToCanvas = (canvas, rows, scaleFactor = 1) => {
   const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  for(let a = 0; a < rows.length; a++) {
-    for(let b = 0; b < rows[a].length; b++) {
-      ctx.fillStyle = rows[a][b];
-      ctx.fillRect(b, a, 1, 1);
+  if(rows && rows.length > 0) {
+    canvas.width = rows.length * scaleFactor;
+    canvas.height = rows[0].length * scaleFactor;
+
+    for(let a = 0; a < rows.length; a++) {
+      for(let b = 0; b < rows[a].length; b++) {
+        ctx.fillStyle = rows[a][b];
+        ctx.fillRect(b * scaleFactor, a * scaleFactor, scaleFactor, scaleFactor);
+      }
     }
   }
-
-  favicon.href = canvas.toDataURL('image/png');
 };
 
 class App extends React.Component {
@@ -97,6 +100,7 @@ class App extends React.Component {
 
     this.state = {
       loadingStatus: LoadingStatus.LOADING,
+      editing: false,
       rows: [[]], // Array of array of hex colors prefixed with #
       selectedColorIndex: 0,
       pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is the promise that is pending. If the key is missing, that cell is not pending
@@ -182,6 +186,23 @@ class App extends React.Component {
     });
   };
 
+  openEditor = () => {
+    if(!hasWeb3()) {
+      this.showWarning({ type: Warnings.WEB3_MISSING });
+      return;
+    }
+
+    this.setState({
+      editing: true,
+    });
+  };
+
+  closeEditor = () => {
+    this.setState({
+      editing: false,
+    });
+  };
+
   selectColorByIndex = index => {
     this.setState({
       selectedColorIndex: index,
@@ -229,7 +250,7 @@ class App extends React.Component {
         this.showWarning({ type: Warnings.TRANSACTION_APPROVAL_REQUIRED });
       } else {
         console.error(error);
-        this.showWarning({ type: Warnings.TRANSACTION_ERROR });
+        //this.showWarning({ type: Warnings.TRANSACTION_ERROR });
       }
     });
 
@@ -307,7 +328,7 @@ class App extends React.Component {
             onClose={this.hideCurrentWarning}>
             <p>To paint on Pixie, you need to use a Ethereum-enabled browser.</p>
             <p>
-              On desktop you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>, or if you want to use Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
+              On desktop you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>. If you want to use Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
             </p>
             <p>
               Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a> and <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
@@ -373,6 +394,19 @@ class App extends React.Component {
     );
   }
 
+  componentDidUpdate() {
+    const {
+      rows,
+    } = this.state;
+
+    const canvas = document.getElementById('canvas');
+    if(!canvas) {
+      return;
+    }
+
+    drawRowsToCanvas(canvas, rows, 10);
+  }
+
   render() {
     const {
       loadingStatus,
@@ -400,13 +434,26 @@ class App extends React.Component {
           }
           { loadingStatus === LoadingStatus.LOADED  &&
             <React.Fragment>
-              <Board rows={rows}
-                pendingCells={pendingCells}
-                onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])}/>
-              <Palette colors={PALETTE_COLORS}
-                selectedColorIndex={selectedColorIndex}
-                onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>
-              <p><a href={contractUrl} target="_blank" rel="noopener noreferrer">View contract on Etherscan</a></p>
+              { !this.state.editing &&
+                <div className="viewer">
+                  <canvas id="canvas" onClick={this.openEditor}/>
+                  <button className="" onClick={this.openEditor}>Paint!</button>
+                </div>
+              }
+              { this.state.editing &&
+                <div className="editor">
+                  <Board rows={rows}
+                  pendingCells={pendingCells}
+                  onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])} />
+                  <Palette colors={PALETTE_COLORS}
+                    selectedColorIndex={selectedColorIndex}
+                    onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>
+                    <button onClick={this.closeEditor}>Done painting</button>
+                </div>
+              }
+              <footer>
+                <a href={contractUrl} target="_blank" rel="noopener noreferrer">View contract on Etherscan</a>
+              </footer>
             </React.Fragment>
           }
         </div>

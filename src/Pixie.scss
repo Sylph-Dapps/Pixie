@@ -82,6 +82,19 @@ html {
   a {
     color: white;
   }
+
+  .link-button {
+    border: none;
+    background: none;
+    color: white;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  button {
+    box-shadow: 5px 5px rgba(0,0,0,.5);
+    margin-bottom: 2em;
+  }
   
   header {
     color: white;
@@ -111,11 +124,29 @@ html {
     padding-right: 20px;
     max-width: 510px;
     text-align: center;
-    
-    
+
     .distractor {
       font-size: 2em;
       text-shadow: 3px 3px $shadow-color;
+    }
+
+    .viewer {
+      animation: appear 1s;
+
+      #canvas {
+        box-shadow: 5px 5px rgba(0,0,0,.5);
+        cursor: pointer;
+        display: block;
+        margin: 0 auto 2em auto;
+      }
+    }
+
+    .editor {
+      animation: appear 1s;
+
+      .Board, .Palette {
+        margin-bottom: 1em;
+      }
     }
   }
 }
