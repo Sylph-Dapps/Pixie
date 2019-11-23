@@ -355,7 +355,6 @@ class Pixie extends React.Component {
     }
 
     const etherscanContractTransactionsURL = `https://${ETHERSCAN_HOSTNAME}/address/${CONTRACT_ADDRESS}`;
-    const etherscanContractCodeURL = `${etherscanContractTransactionsURL}#code`;
 
     return (
       <React.Fragment>
@@ -363,7 +362,7 @@ class Pixie extends React.Component {
           <Popup title="About Pixie"
             onClose={this.hideCurrentMessage}>
             <p>Pixie is a collaborative art project that anyone can contribute to!</p>
-            <p>Everyone shares a single 16x16 grid and can paint its cells using any color from the original NES color palette.</p>
+            <p>Everyone shares a single 16x16 grid and can paint its cells using the colors from the original NES color palette.</p>
             <p>It currently looks like this:</p>
             <p style={{textAlign: 'center'}}>
               <canvas id="about-canvas"/>
@@ -378,13 +377,10 @@ class Pixie extends React.Component {
             { this.renderBrowserRequirementsMessage() }
             <h3>Fees</h3>
             <p>
-              When submitting a transaction to the network, you include a small fee, known as gas, to compesnate the owners of the computers that power the network. Most Ethereum-enabled browsers allow you to control the fee by setting the "gas price" for your transaction. The higher the gas price you set, the sooner the network will process your transaction. When volume on the network is low, it is usually possible to pay a fee of less than 1 cent and have your transaction processed within a few minutes. Pixie charges no fees on top of the gas fee.
+              When submitting a transaction to the Ethereum network, you include a small fee, known as gas, to compensate the owners of the computers that power the network. This fee is paid using a cryptocurrency called "Ether".
             </p>
             <p>
-              As a result, to contribute to Pixie, you need a small amout of ether in your Ethereum account to cover gas costs.
-            </p>
-            <p>
-              Pixie is currently deployed to a test version of the Ethereum network where the ether has no value, making Pixie essentially free to use for the moment. Before contributing to Pixie, you will need to point your browser to the <b>Ropsten Test Network</b>.
+              Pixie is currently deployed to a test version of the Ethereum network where the Ether has no value, making Pixie free to use for the moment. Before contributing to Pixie, you will need to point your browser to the <b>Ropsten Test Network</b> and load your Ethereum account with some Ropsten Ether to cover the gas "costs". You can do this by pasting your account's address into <a href="https://faucet.ropsten.be/" target="_blank" rel="noopener noreferrer">this form</a>.
             </p>
           </Popup>
         }
