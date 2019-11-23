@@ -83,18 +83,20 @@ html {
     color: white;
   }
 
-  .link-button {
-    border: none;
-    background: none;
-    color: white;
-    text-decoration: underline;
-    padding: 0;
-  }
-
   button {
     box-shadow: 5px 5px rgba(0,0,0,.5);
-    margin-bottom: 2em;
+    margin-bottom: 1em;
     font-size: 1.25em;
+
+    &.link-button {
+      border: none;
+      background: none;
+      color: white;
+      text-decoration: underline;
+      box-shadow: none;
+      padding: 0;
+      font-size: 1em;
+    }
   }
   
   header {
@@ -148,6 +150,12 @@ html {
       .Board, .Palette {
         margin-bottom: 1em;
       }
+    }
+  }
+
+  .Popup {
+    #about-canvas {
+      border: 1px solid black;
     }
   }
 }

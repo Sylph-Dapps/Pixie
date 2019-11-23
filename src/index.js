@@ -1,6 +1,6 @@
 import 'react-app-polyfill/ie9';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from 'Pixie';
+import Pixie from 'Pixie';
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<Pixie />, document.getElementById('root'));
