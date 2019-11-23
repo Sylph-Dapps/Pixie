@@ -26,6 +26,7 @@ const Warnings = {
   TRANSACTION_APPROVAL_REQUIRED: "TRANSACTION_APPROVAL_REQUIRED",
   TRANSACTION_SUBMITTED: "TRANSACTION_SUBMITTED",
   TRANSACTION_ERROR: "TRANSACTION_ERROR",
+  CELL_ALREADY_DESIRED_COLOR: "CELL_ALREADY_DESIRED_COLOR",
 };
 
 const CONTRACT_ADDRESS = "0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"; // Ropsten
@@ -40,7 +41,7 @@ const PALETTE_COLORS = [
 
 const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
 
-const intToCSSHex = int => "#" + int.toString(16).padStart(6, "0");
+const intToCSSHex = int => "#" + int.toString(16).padStart(6, "0").toUpperCase();
 
 /**
  * Returns an array of arrays of CSS hex strings that represent the grid of colors to draw on the board.
@@ -140,17 +141,17 @@ class App extends React.Component {
     }
     
     if(!hasWeb3()) {
-      this.showWarning(Warnings.WEB3_MISSING);
+      this.showWarning({ type: Warnings.WEB3_MISSING });
       return;
     }
 
     try {
-      this.showWarning(Warnings.WALLET_CONNECTION_APPOVAL_PENDING);
+      this.showWarning({ type: Warnings.WALLET_CONNECTION_APPOVAL_PENDING });
       this.writtableWeb3 = await getWeb3();
       this.hideCurrentWarning();
     } catch (error) {
       if(error && error.code === 4001) {
-        this.showWarning(Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED);
+        this.showWarning({ type: Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED });
         return;
       } else {
         console.error(error);
@@ -188,6 +189,16 @@ class App extends React.Component {
   };
 
   paintCell = async (row, column, color) => {
+    if(this.state.rows[row][column] === color) {
+      this.showWarning({
+        type: Warnings.CELL_ALREADY_DESIRED_COLOR,
+        data: {
+          color: color
+        }
+      });
+      return;
+    }
+
     let contract = await this.getWrittablePixieContract();
     if(!contract) {
       return;
@@ -201,10 +212,11 @@ class App extends React.Component {
     });
     setColorPromise.on('transactionHash', hash => {
       this.pendingTransactions[row + "," + column] = hash;
-      this.setState({
-        mostRecentTransactionHash: hash,
-      }, () => {
-        this.showWarning(Warnings.TRANSACTION_SUBMITTED)
+      this.showWarning({
+        type: Warnings.TRANSACTION_SUBMITTED,
+        data: {
+          hash: hash
+        }
       });
     });
     setColorPromise.on('receipt', receipt => {
@@ -214,17 +226,17 @@ class App extends React.Component {
     setColorPromise.on('error', error => {
       this.clearPendingCell(row, column, setColorPromise);
       if(error.code === 4001 && this.showTransactionApprovalPopups) {
-        this.showWarning(Warnings.TRANSACTION_APPROVAL_REQUIRED);
+        this.showWarning({ type: Warnings.TRANSACTION_APPROVAL_REQUIRED });
       } else {
         console.error(error);
-        this.showWarning(Warnings.TRANSACTION_ERROR);
+        this.showWarning({ type: Warnings.TRANSACTION_ERROR });
       }
     });
 
     this.setPendingCell(row, column, setColorPromise);
 
     if(this.showTransactionApprovalPopups) {
-      this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
+      this.showWarning({ type: Warnings.TRANSACTION_APPROVAL_PENDING });
     }
 
     await setColorPromise;
@@ -282,15 +294,15 @@ class App extends React.Component {
     document.getElementsByTagName("html")[0].style = "overflow:auto";
   }
 
-  renderWarning = currentWarning => {
+  renderWarning = warning => {
     let transactionUrl = null;
-    if(currentWarning === Warnings.TRANSACTION_SUBMITTED) {
-      transactionUrl = `https://${ETHERSCAN_HOSTNAME}/tx/${this.state.mostRecentTransactionHash}`;
+    if(warning.type === Warnings.TRANSACTION_SUBMITTED) {
+      transactionUrl = `https://${ETHERSCAN_HOSTNAME}/tx/${warning.data.hash}`;
     }
 
     return (
       <React.Fragment>
-        { currentWarning === Warnings.WEB3_MISSING &&
+        { warning.type === Warnings.WEB3_MISSING &&
           <Popup title="Hold up"
             onClose={this.hideCurrentWarning}>
             <p>To paint on Pixie, you need to use a Ethereum-enabled browser.</p>
@@ -302,7 +314,7 @@ class App extends React.Component {
             </p>
           </Popup>
         }
-        { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
+        { warning.type === Warnings.WALLET_CONNECTION_APPOVAL_PENDING &&
           <Popup title="Please let Pixie view your Ethereum account's address"
             onClose={this.hideCurrentWarning}>
             <p>Pixie has submitted a request to view your Ethereum account's address. In order to paint a pixel, you must approve the request.</p>
@@ -311,13 +323,13 @@ class App extends React.Component {
             }
           </Popup>
         }
-        { currentWarning === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
+        { warning.type === Warnings.WALLET_CONNECTION_APPOVAL_REQUIRED &&
           <Popup title="Hold up"
             onClose={this.hideCurrentWarning}>
             <p>In order to paint a pixel, Pixie needs to know your Ethereum address. Please click on the pixel you'd like to paint again and allow the connection.</p>
           </Popup>
         }
-        { currentWarning === Warnings.TRANSACTION_APPROVAL_PENDING &&
+        { warning.type === Warnings.TRANSACTION_APPROVAL_PENDING &&
           <Popup title="Awaiting your approval"
             onClose={this.hideCurrentWarning}>
             <p>Pixie has put together a transaction request that, when submitted, will store your pixel's new color to the Ethereum blockchain. Once you approve the request, your pixel is as good as painted!</p>
@@ -326,13 +338,13 @@ class App extends React.Component {
             }
           </Popup>
         }
-        { currentWarning === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
+        { warning.type === Warnings.TRANSACTION_APPROVAL_REQUIRED &&
           <Popup title="Hold up"
             onClose={this.hideCurrentWarning}>
             <p>In order to paint that pixel, you must approve the transaction request. If you rejected the request by accident, you can click on the pixel you want to paint again.</p>
           </Popup>
         }
-        { currentWarning === Warnings.TRANSACTION_SUBMITTED &&
+        { warning.type === Warnings.TRANSACTION_SUBMITTED &&
           <Popup title="Hooray!"
             onClose={this.hideCurrentWarning}>
             <p>Your transaction has been submitted to the Ethereum network! Once it's mined, your pixel will be recolored for all the world to see!</p>
@@ -340,10 +352,21 @@ class App extends React.Component {
             <p>Feel free to paint some other pixels while you wait :)</p>
           </Popup>
         }
-        { currentWarning === Warnings.TRANSACTION_ERROR &&
+        { warning.type === Warnings.TRANSACTION_ERROR &&
           <Popup title=":("
             onClose={this.hideCurrentWarning}>
             <p>There was a problem processing your transaction.</p>
+          </Popup>
+        }
+        { warning.type === Warnings.CELL_ALREADY_DESIRED_COLOR &&
+          <Popup title="Good news!"
+            onClose={this.hideCurrentWarning}>
+            <div className="cell-already-desired-color">
+              <div className="text">That pixel is already</div>
+              <div className="color-swatch" style={{
+                backgroundColor: warning.data.color,
+              }}/>
+            </div>
           </Popup>
         }
       </React.Fragment>
