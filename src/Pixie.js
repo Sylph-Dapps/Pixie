@@ -25,6 +25,7 @@ const Warnings = {
   TRANSACTION_APPROVAL_PENDING: "TRANSACTION_APPROVAL_PENDING",
   TRANSACTION_APPROVAL_REQUIRED: "TRANSACTION_APPROVAL_REQUIRED",
   TRANSACTION_SUBMITTED: "TRANSACTION_SUBMITTED",
+  TRANSACTION_ERROR: "TRANSACTION_ERROR",
 };
 
 const CONTRACT_ADDRESS = "0x93f9ABAfbCa869632Ef03F72A53734E41Ff0b8F6"; // Ropsten
@@ -86,11 +87,18 @@ class App extends React.Component {
     this.writtablePixieContract = null;
     this.writtableWeb3 = null;
     this.showTransactionApprovalPopups = !isMobileOrTablet();
+
+    // On mobile Metamask the receipt event does not fire and the promise does not resolve when calling setColor,
+    // which means clearPendingCells is never called and the "..." would stay in the cell forever without a workaround.
+    // When the transactionhash event fires, we store the hash in this look up and then when the ColorSetEvent fires
+    // on the viewOnlyPixieContract, we check if it's for the transaction in question and call clearPendingCells.
+    this.pendingTransactions = {};
+
     this.state = {
       loadingStatus: LoadingStatus.LOADING,
       rows: [[]], // Array of array of hex colors prefixed with #
       selectedColorIndex: 0,
-      pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is always true. If the key is missing, that cell is not pending
+      pendingCells: {}, // Keys are <row number>,<column number> (e.g. 3,2). Value is the promise that is pending. If the key is missing, that cell is not pending
       currentWarning: null,
       mostRecentTransactionHash: null,
     };
@@ -113,7 +121,12 @@ class App extends React.Component {
       const column = event.args.column.toNumber();
       const color = intToCSSHex(event.args.color.toNumber());
       this.setCellColor(row, column, color);
-    })
+
+      // If the transaction that triggered this event was one of our pending ones, clear it from pending.
+      if(event.transactionHash === this.pendingTransactions[row + "," + column]) {
+        this.clearPendingCell(row, column);
+      }
+    });
 
     await this.loadColors();
     this.setState({
@@ -180,8 +193,6 @@ class App extends React.Component {
       return;
     }
 
-    this.setPendingCell(row, column);
-
     const accounts = await this.writtableWeb3.eth.getAccounts();
 
     const newColor = cssHexToInt(color);
@@ -189,6 +200,7 @@ class App extends React.Component {
       from: accounts[0]
     });
     setColorPromise.on('transactionHash', hash => {
+      this.pendingTransactions[row + "," + column] = hash;
       this.setState({
         mostRecentTransactionHash: hash,
       }, () => {
@@ -197,21 +209,27 @@ class App extends React.Component {
     });
     setColorPromise.on('receipt', receipt => {
       this.setCellColor(row, column, color);
-      this.clearPendingCell(row, column);
-    })
+      this.clearPendingCell(row, column, setColorPromise);
+    });
     setColorPromise.on('error', error => {
-      this.clearPendingCell(row, column);
+      this.clearPendingCell(row, column, setColorPromise);
       if(error.code === 4001 && this.showTransactionApprovalPopups) {
         this.showWarning(Warnings.TRANSACTION_APPROVAL_REQUIRED);
       } else {
         console.error(error);
+        this.showWarning(Warnings.TRANSACTION_ERROR);
       }
     });
+
+    this.setPendingCell(row, column, setColorPromise);
 
     if(this.showTransactionApprovalPopups) {
       this.showWarning(Warnings.TRANSACTION_APPROVAL_PENDING);
     }
+
     await setColorPromise;
+
+    this.clearPendingCell(row, column, setColorPromise);
   }
 
   setCellColor = (row, column, color) => {
@@ -224,20 +242,28 @@ class App extends React.Component {
     });
   };
 
-  setPendingCell = (row, column) => {
+  /**
+   * Updates (row,columns)'s value in this.state.pendingCells to be promise
+   */
+  setPendingCell = (row, column, promise) => {
     let pendingCells = { ...this.state.pendingCells };
-    pendingCells[row + "," + column] = true;
+    pendingCells[row + "," + column] = promise;
     this.setState({
       pendingCells,
     });
   };
 
-  clearPendingCell = (row, column) => {
-    const pendingCells = { ...this.state.pendingCells };
-    delete pendingCells[row + "," + column];
-    this.setState({
-      pendingCells,
-    });
+  /**
+   * Clears (row,columns)'s from this.state.pendingCells. If promise is provided, only clear the entry if the promise matches the entry's value.
+   */
+  clearPendingCell = (row, column, promise) => {
+    if(!promise || this.state.pendingCells[row + "," + column] === promise) {
+      const pendingCells = { ...this.state.pendingCells };
+      delete pendingCells[row + "," + column];
+      this.setState({
+        pendingCells,
+      });
+    }
   };
 
   showWarning = warning => {
@@ -267,12 +293,12 @@ class App extends React.Component {
         { currentWarning === Warnings.WEB3_MISSING &&
           <Popup title="Hold up"
             onClose={this.hideCurrentWarning}>
+            <p>To paint on Pixie, you need to use a Ethereum-enabled browser.</p>
             <p>
-              To paint on Pixie, you need to use a Ethereum-enabled browser, like <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
-              If you're using Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
+              On desktop you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>, or if you want to use Chrome, you can install the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin to turn Chrome into an Ethereum-enabled browser.
             </p>
             <p>
-              Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+              Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a> and <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
             </p>
           </Popup>
         }
@@ -312,6 +338,12 @@ class App extends React.Component {
             <p>Your transaction has been submitted to the Ethereum network! Once it's mined, your pixel will be recolored for all the world to see!</p>
             <p>The amount of time it takes for a transaction to be mined varies based on the amount of other activity currently happening on the Ethereum network. You can view the status of your transaction on <a href={transactionUrl} target="_blank" rel="noopener noreferrer">Etherscan</a>.</p>
             <p>Feel free to paint some other pixels while you wait :)</p>
+          </Popup>
+        }
+        { currentWarning === Warnings.TRANSACTION_ERROR &&
+          <Popup title=":("
+            onClose={this.hideCurrentWarning}>
+            <p>There was a problem processing your transaction.</p>
           </Popup>
         }
       </React.Fragment>

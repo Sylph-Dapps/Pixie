@@ -35,12 +35,11 @@
 
     .window-header {
       display: flex;
-      align-items: flex-end;
-      padding: 10px;
+      align-items: baseline;
 
       .title {
         flex-grow: 1;
-        padding-left: 10px;
+        padding-left: 20px;
         font-weight: bold;
       }
 
@@ -48,6 +47,7 @@
         cursor: pointer;
         user-select: none;
         font-size: 20px;
+        padding: 10px;
       }
     }
 
