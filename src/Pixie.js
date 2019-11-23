@@ -443,8 +443,8 @@ class App extends React.Component {
               { this.state.editing &&
                 <div className="editor">
                   <Board rows={rows}
-                  pendingCells={pendingCells}
-                  onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])} />
+                    pendingCells={pendingCells}
+                    onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])} />
                   <Palette colors={PALETTE_COLORS}
                     selectedColorIndex={selectedColorIndex}
                     onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>
