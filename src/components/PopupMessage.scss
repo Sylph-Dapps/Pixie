@@ -1,0 +1,31 @@
+.Popup .window-content {
+  p {
+    margin: 0;
+    padding: 0;
+    &:not(:last-child) {
+      margin-bottom: 20px;
+    }
+  }
+
+  input {
+    margin-left: 0;
+  }
+  label {
+    font-weight: bold;
+  }
+  
+  .cell-already-desired-color {
+    display: flex;
+    align-items: center;
+  
+    .text {
+      margin-right: 5px;
+    }
+    .color-swatch {
+      border: 1px solid black;
+      display: inline-block;
+      width: 1.25em;
+      height: 1.25em;
+    }
+  }
+}

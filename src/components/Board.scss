@@ -1,5 +1,21 @@
+@keyframes pulse {
+  0% {
+    width: 0;
+    height: 0;
+  }
+  50% {
+    width: 100px;
+    height: 100px;
+  }
+  100% {
+    width: 0;
+    height: 0;
+  }
+}
+
 .Board {
   display: flex;
+  padding-top: 10px;
   
   .board-content {
     margin:0px auto;
@@ -15,10 +31,26 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
 
       &:not(:last-child) {
         margin-right: -1px;
       }
+
+      .pending-indicator {
+        border-radius: 100px;
+        animation: pulse 2s infinite;
+      }
     }
+  }
+}
+
+/*
+ If we're at a mobile resolution AND at least half of the space on the screen is left after accounting for the palette
+ and the "Done" button, resize the board such that it fills the remaining space.
+*/
+@media (max-width: 480px) and (min-height: 480px) {
+  .Board .board-content {
+    max-height: calc(100vh - 240px); // 240px is roughly the space the palette and "Done" button occupy
   }
 }

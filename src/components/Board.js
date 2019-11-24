@@ -1,5 +1,6 @@
 import React from 'react';
 import isMobileOrTablet from 'utils/isMobileOrTablet';
+import sync from 'utils/css-animation-sync';
 
 import "./Board.scss";
 
@@ -7,6 +8,11 @@ const CELL_SIZE = isMobileOrTablet() ? 31 : 25;
 const BORDER_SIZE = 1;
 
 class Board extends React.Component {
+
+  constructor(props) {
+    super(props);
+    sync('pulse');
+  }
 
   render() {
     const {
@@ -36,16 +42,23 @@ class Board extends React.Component {
                   const style = {
                     backgroundColor: cellColor,
                     border: BORDER_SIZE + 'px solid black',
-                    color: cellColor === "#000000" ? "white" : "black",
                     width: CELL_SIZE + 'px',
                     height: CELL_SIZE + 'px',
                   };
-                  const content = pendingCells[i + "," + j] ? "..." : "";
+
+                  const nextColor = pendingCells[i + ',' + j];
+
                   return (
                     <div className="cell"
                       key={j}
                       onClick={() => onCellClick(i, j)}
-                      style={style}>{content}</div>
+                      style={style}>
+                      { nextColor &&
+                        <div className="pending-indicator" style={{
+                          backgroundColor: nextColor,
+                        }}/>
+                      }
+                    </div>
                   );
                 }) }
               </div>
