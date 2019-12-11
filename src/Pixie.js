@@ -277,12 +277,20 @@ class Pixie extends React.Component {
 
     this.setPendingCell(row, column, color);
 
+    // Status has an unusual behavior where it resets the scroll position of the board to 0,0 when the confirmation window is opened.
+    // To work around this we store the board's scroll position for recall later. There is no event when the confirmation window is
+    // closed, so we instead reset the board's scroll position continuously until the user interacts with Pixie again (onTouchStart on
+    // the top-level div in render).
+    if(window.ethereum.isStatus) {
+      this.storeBoardPosition();
+      this.boardScrollResetInterval = setInterval(this.resetBoardScrollPosition, 100);
+    }
+
     setTimeout(async () => {
       if(this.showTransactionApprovalMessages) {
         this.showMessage({ type: TRANSACTION_APPROVAL_PENDING });
       }
       await setColorPromise;
-      this.clearPendingCell(row, column);
     }, 1000);
   };
 
@@ -364,6 +372,22 @@ class Pixie extends React.Component {
     document.getElementsByTagName("html")[0].style = "overflow:auto";
   };
 
+  storeBoardPosition = () => {
+    const boardContent = document.querySelector(".board-content");
+    if(boardContent) {
+      this.previousBoardScrollLeft = boardContent.scrollLeft;
+      this.previousBoardScrollTop = boardContent.scrollTop;
+    }
+  };
+
+  resetBoardScrollPosition = () => {
+    const boardContent = document.querySelector(".board-content");
+    if(boardContent) {
+      boardContent.scrollLeft = this.previousBoardScrollLeft;
+      boardContent.scrollTop = this.previousBoardScrollTop;
+    }
+  };
+
   render() {
     const {
       loadingStatus,
@@ -374,7 +398,7 @@ class Pixie extends React.Component {
     } = this.state;
 
     return (
-      <div className="Pixie">
+      <div className="Pixie" onTouchStart={() => clearInterval(this.boardScrollResetInterval)}>
         <header>
           <h1>P I X I E</h1>
           <h2>Collaborative pixel art on Ethereum</h2>
