@@ -9,6 +9,7 @@ export const WEB3_MISSING = "WEB3_MISSING";
 export const UNABLE_TO_LOAD_CONTRACT = "UNABLE_TO_LOAD_CONTRACT";
 export const WALLET_CONNECTION_APPOVAL_PENDING = "WALLET_CONNECTION_APPOVAL_PENDING";
 export const WALLET_CONNECTION_APPOVAL_REQUIRED = "WALLET_CONNECTION_APPOVAL_REQUIRED";
+export const ACCOUNT_NOT_WHITELISTED = "ACCOUNT_NOT_WHITELISTED";
 export const TRANSACTION_APPROVAL_PENDING = "TRANSACTION_APPROVAL_PENDING";
 export const TRANSACTION_APPROVAL_REQUIRED = "TRANSACTION_APPROVAL_REQUIRED";
 export const TRANSACTION_SUBMITTED = "TRANSACTION_SUBMITTED";
@@ -17,11 +18,25 @@ export const CELL_ALREADY_DESIRED_COLOR = "CELL_ALREADY_DESIRED_COLOR";
 
 const ETHERSCAN_HOSTNAME = "ropsten.etherscan.io";
 
+function validateEmail(email) {
+  var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+}
+
+const AWAITING_SUBMISSION = "awaitingSubmission";
+const ERRORED = "errored";
+const SUBMITTED = "submitted";
+
 class PopupMessage extends React.Component {
 
   constructor(props) {
     super(props);
+    this.emailInput = React.createRef();
     this.hideConfirmationMessagesCheckbox = React.createRef();
+    this.state = {
+      emailAddressValidationFailed: false,
+      whitelistingState: AWAITING_SUBMISSION,
+    };
   }
 
   handleClose = () => {
@@ -33,6 +48,70 @@ class PopupMessage extends React.Component {
     }
     this.props.onClose(options);
   };
+
+  handleRequestAccessClick = async () => {
+    const {
+      address,
+      web3,
+    } = this.props.message.data;
+
+    this.setState({
+      userRejectedSignatureRequest: false,
+      whitelistingState: AWAITING_SUBMISSION,
+    });
+
+    const emailAddress = this.emailInput.current.value;
+    if(!validateEmail(emailAddress)) {
+      this.setState({
+        emailAddressValidationFailed: true,
+      });
+      return;
+    }
+
+    this.setState({
+      emailAddressValidationFailed: false,
+    });
+
+    const messageToSign = `My email address is ${emailAddress}, and I would like to join the illustrious group of Pixie testers!`;
+    let signature;
+    try {
+      signature = await web3.eth.personal.sign(messageToSign, address);
+    } catch(error) {
+      this.setState({
+        userRejectedSignatureRequest: true,
+      });
+      return;
+    }
+
+    try {
+      let formData = [];
+      formData.push(encodeURIComponent("address") + "=" + encodeURIComponent(address));
+      formData.push(encodeURIComponent("message") + "=" + encodeURIComponent(messageToSign));
+      formData.push(encodeURIComponent("signature") + "=" + encodeURIComponent(signature));
+      formData = formData.join("&");
+      
+      const response = await fetch("https://sylphdapps.com/pixie/apply-to-be-a-tester.php", {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+      });
+
+      if (response.status !== 200) {
+        throw new Error('Not a 200');
+      }
+
+      this.setState({
+        whitelistingState: SUBMITTED,
+      })
+    } catch (error) {
+      this.setState({
+        whitelistingState: ERRORED,
+      });
+    }
+  }
 
   renderBrowserRequirementsMessage = () => {
     return (
@@ -121,6 +200,40 @@ class PopupMessage extends React.Component {
           </Popup>
         );
         break;
+      case ACCOUNT_NOT_WHITELISTED:
+        const inputClassName = this.state.emailAddressValidationFailed ? 'error' : '';
+        const instructionsClassName = this.state.userRejectedSignatureRequest ? 'instructions-error' : '';
+        let title = "Hold up";
+        if(this.state.whitelistingState === ERRORED) {
+          title = "Whoops!"
+        } else if (this.state.whitelistingState === SUBMITTED) {
+          title = "Hooray!"
+        }
+        toReturn = (
+          <Popup title={title}
+            onClose={this.handleClose}>
+            { this.state.whitelistingState === AWAITING_SUBMISSION &&
+              <React.Fragment>
+                <p>At the moment, Pixie is only available to a limited group of testers. To join, enter your email address below and click "Request access".</p>
+                <div className="email-input-container">
+                  <input ref={this.emailInput}
+                    className={inputClassName}
+                    placeholder="Email address"/>
+                  <button onClick={this.handleRequestAccessClick}>Request access</button>
+                </div>
+                <p>You'll be notified at this email address once your tester access is approved.</p>
+                <p className={instructionsClassName}>When you click "Request access", your Ethereum-enabled browser will prompt you to sign a message, proving that you own the Ethereum address you're using to request access.</p>
+              </React.Fragment>
+            }
+            { this.state.whitelistingState === ERRORED &&
+              <p>Gah! There was a problem submitting your application. Please try again later :(</p>
+            }
+            { this.state.whitelistingState === SUBMITTED &&
+              <p>Thank you for your request! You'll receive an email once your tester access is approved :)</p>
+            }
+          </Popup>
+        );
+        break;
       case TRANSACTION_APPROVAL_PENDING:
         toReturn = (
           <Popup title="Awaiting your approval"
@@ -178,8 +291,8 @@ class PopupMessage extends React.Component {
           </Popup>
         );
         break;
-        default:
-          break;
+      default:
+        break;
     }
     return toReturn;
   }

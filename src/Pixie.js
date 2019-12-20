@@ -14,6 +14,7 @@ import PopupMessage, {
   UNABLE_TO_LOAD_CONTRACT,
   WALLET_CONNECTION_APPOVAL_PENDING,
   WALLET_CONNECTION_APPOVAL_REQUIRED,
+  ACCOUNT_NOT_WHITELISTED,
   TRANSACTION_APPROVAL_PENDING,
   TRANSACTION_APPROVAL_REQUIRED,
   TRANSACTION_SUBMITTED,
@@ -213,7 +214,7 @@ class Pixie extends React.Component {
     const TruffleContract = require("@truffle/contract");
     const pixieTruffleContract = TruffleContract(PixieAbi);
     pixieTruffleContract.setProvider(web3.currentProvider);
-    const pixieContract = await pixieTruffleContract.at(CONTRACT_ADDRESS);
+    const pixieContract = await pixieTruffleContract.deployed();
     return pixieContract;
   };
 
@@ -281,7 +282,7 @@ class Pixie extends React.Component {
     // To work around this we store the board's scroll position for recall later. There is no event when the confirmation window is
     // closed, so we instead reset the board's scroll position continuously until the user interacts with Pixie again (onTouchStart on
     // the top-level div in render).
-    if(window.ethereum.isStatus) {
+    if(window.ethereum && window.ethereum.isStatus) {
       this.storeBoardPosition();
       this.boardScrollResetInterval = setInterval(this.resetBoardScrollPosition, 100);
     }
@@ -335,9 +336,27 @@ class Pixie extends React.Component {
     });
   };
 
-  openEditor = () => {
+  openEditor = async () => {
     if(!hasWeb3()) {
       this.showMessage({ type: WEB3_MISSING });
+      return;
+    }
+
+    let contract = await this.getWrittablePixieContract();
+    if(!contract) {
+      return;
+    }
+
+    const accounts = await this.writtableWeb3.eth.getAccounts();
+    const hasAccess = await contract.hasAccess(accounts[0]);
+    if(!hasAccess) {
+      this.showMessage({
+        type: ACCOUNT_NOT_WHITELISTED,
+        data: {
+          web3: this.writtableWeb3,
+          address: accounts[0]
+        }
+      });
       return;
     }
 
