@@ -99,14 +99,17 @@ class PopupMessage extends React.Component {
         body: formData
       });
 
+      /*
       if (response.status !== 200) {
         throw new Error('Not a 200');
       }
+      */
 
       this.setState({
         whitelistingState: SUBMITTED,
       })
     } catch (error) {
+      console.log(error);
       this.setState({
         whitelistingState: ERRORED,
       });
