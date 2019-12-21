@@ -1,6 +1,7 @@
 import React from "react";
 import Popup from "components/Popup";
 import isMobileOrTablet from 'utils/isMobileOrTablet';
+import validateEmail from 'utils/validateEmail';
 
 import './PopupMessage.scss';
 
@@ -17,11 +18,6 @@ export const TRANSACTION_ERROR = "TRANSACTION_ERROR";
 export const CELL_ALREADY_DESIRED_COLOR = "CELL_ALREADY_DESIRED_COLOR";
 
 const ETHERSCAN_HOSTNAME = "ropsten.etherscan.io";
-
-function validateEmail(email) {
-  var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(String(email).toLowerCase());
-}
 
 const AWAITING_SUBMISSION = "awaitingSubmission";
 const ERRORED = "errored";
@@ -84,19 +80,15 @@ class PopupMessage extends React.Component {
     }
 
     try {
-      let formData = [];
-      formData.push(encodeURIComponent("address") + "=" + encodeURIComponent(address));
-      formData.push(encodeURIComponent("message") + "=" + encodeURIComponent(messageToSign));
-      formData.push(encodeURIComponent("signature") + "=" + encodeURIComponent(signature));
-      formData = formData.join("&");
-      
-      const response = await fetch("https://sylphdapps.com/pixie/apply-to-be-a-tester.php", {
-        method: "POST",
+      let params = [];
+      params.push(encodeURIComponent("address") + "=" + encodeURIComponent(address));
+      params.push(encodeURIComponent("message") + "=" + encodeURIComponent(messageToSign));
+      params.push(encodeURIComponent("signature") + "=" + encodeURIComponent(signature));
+      params = params.join("&");
+
+      await fetch("https://sylphdapps.com/pixie/apply-to-be-a-tester.php?" + params, {
+        method: "GET",
         mode: "no-cors",
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData
       });
 
       /*
@@ -221,7 +213,7 @@ class PopupMessage extends React.Component {
                 <div className="email-input-container">
                   <input ref={this.emailInput}
                     className={inputClassName}
-                    placeholder="Email address"/>
+                    placeholder="Email address" />
                   <button onClick={this.handleRequestAccessClick}>Request access</button>
                 </div>
                 <p>You'll be notified at this email address once your tester access is approved.</p>
