@@ -432,7 +432,7 @@ class Pixie extends React.Component {
         <header>
           <h1>P I X I E</h1>
           <h2>Collaborative pixel art on Ethereum</h2>
-          <p>By <a href="https://michaelvandaniker.com">Michael VanDaniker</a></p>
+          <p>By <a href="https://sylphdapps.com">Sylph Dapps</a></p>
         </header>
         <div className="content">
           { loadingStatus === LoadingStatus.LOADING &&
