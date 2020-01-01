@@ -39,12 +39,7 @@ class PopupMessage extends React.Component {
   renderBrowserRequirementsMessage = () => {
     return (
       <React.Fragment>
-        <p>To paint on Pixie, you need to use a Ethereum-enabled browser.</p>
-        <p>
-          You can turn Chrome into an Ethereum-enabled browser by installing the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin, or you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>. 
-        </p>
-        <p>
-          Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+        <p>To paint on Pixie, you need to use a Ethereum-enabled browser. You can turn Chrome and Firefox into Ethereum-enabled browsers by installing the <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a> plugin, and on mobile you can use <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>.
         </p>
       </React.Fragment>
     )
