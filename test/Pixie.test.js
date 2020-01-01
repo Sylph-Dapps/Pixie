@@ -50,7 +50,33 @@ contract("Pixie", accounts => {
     assert.isTrue(await pixie.hasAccess(accounts[0]));
   });
 
+  it("allows anyone to paint when access checks are disabled", async () => {
+    // Check that requiresAccessChecks is true by default
+    assert.isTrue(await pixie.requiresAccessChecks());
+    
+    await pixie.disableAccessChecks({from: accounts[0]});
+
+    // Preconditions
+    assert.isFalse(await pixie.requiresAccessChecks());
+    assert.isFalse(await pixie.hasAccess(accounts[1]));
+
+    // Paint even though we aren't an approved user
+    pixie.setColor(0, 0, 0xcc0066, {from: accounts[1]})
+    assert.equal(await pixie.getColor(0, 0), 0xcc0066);
+
+    // Re-enable access checks
+    await pixie.enableAccessChecks({from: accounts[0]});
+    assert.isTrue(await pixie.requiresAccessChecks());
+  
+    // Fail to paint because access checks are enabled again
+    await expectThrow(
+      pixie.setColor(1, 1, 0xcc0022, {from: accounts[1]})
+    );
+    assert.equal(await pixie.getColor(1, 1), DEFAULT_COLOR);
+  });
+
   it("does not give a random account access initially or let them paint without access", async () => {
+    assert.isTrue(await pixie.requiresAccessChecks());
     assert.isFalse(await pixie.hasAccess(accounts[1]));
     assert.equal(await pixie.getColor(0, 0), DEFAULT_COLOR);
     await expectThrow(
@@ -61,6 +87,7 @@ contract("Pixie", accounts => {
 
   it("allows the owner to grants an account access, allowing painting, and allows the owner to revoke access, denying painting", async () => {
     // Precondition
+    assert.isTrue(await pixie.requiresAccessChecks());
     assert.isFalse(await pixie.hasAccess(accounts[1]));
 
     // Give an account access

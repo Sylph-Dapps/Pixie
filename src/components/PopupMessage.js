@@ -39,12 +39,12 @@ class PopupMessage extends React.Component {
   renderBrowserRequirementsMessage = () => {
     return (
       <React.Fragment>
-        <p>To contribute to Pixie, you need to use a Ethereum-enabled browser.</p>
+        <p>To paint on Pixie, you need to use a Ethereum-enabled browser.</p>
         <p>
-          On desktop you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>. You can turn Chrome into an Ethereum-enabled browser by installing the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin.
+          You can turn Chrome into an Ethereum-enabled browser by installing the <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank" rel="noopener noreferrer">Metamask</a> plugin, or you can use <a href="https://www.brave.com/" target="_blank" rel="noopener noreferrer">Brave</a> or <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>. 
         </p>
         <p>
-          Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>, <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a>, <a href="https://wallet.coinbase.com/" target="_blank" rel="noopener noreferrer">Coinbase Wallet</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
+          Mobile options include <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a> and the mobile version of <a href="https://www.opera.com/" target="_blank" rel="noopener noreferrer">Opera</a>.
         </p>
       </React.Fragment>
     )

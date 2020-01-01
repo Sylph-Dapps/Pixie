@@ -30,8 +30,6 @@ const LoadingStatus = {
   ERRORED: "ERRORED",
 }
 
-const CONTRACT_ADDRESS = "0x9131c734003B70E033c32Ff801510891B57Cb0da"; // Ropsten
-
 const NUMBER_COLUMNS = 16;
 
 const PALETTE_COLORS = [
@@ -139,6 +137,7 @@ class Pixie extends React.Component {
     await this.loadColors();
     this.setState({
       loadingStatus: LoadingStatus.LOADED,
+      contractAddress: this.viewOnlyPixieContract.address,
     });
   }
 
@@ -268,7 +267,9 @@ class Pixie extends React.Component {
     });
     setColorPromise.on('error', error => {
       this.clearPendingCell(row, column);
-      if(error.code === 4001 && this.showTransactionApprovalMessages) {
+      // Brave populates the error arg with the stack trace rather than an error object, so if error.code is missing we make the assumption
+      // that the user rejected the request. For other wallets we can check error.code === 4001 specifically.
+      if((typeof error.code === "undefined" || error.code === 4001) && this.showTransactionApprovalMessages) {
         this.showMessage({ type: TRANSACTION_APPROVAL_REQUIRED });
       } else {
         console.error(error);
@@ -287,11 +288,18 @@ class Pixie extends React.Component {
       this.boardScrollResetInterval = setInterval(this.resetBoardScrollPosition, 100);
     }
 
+    // Use a one second timeout before attempting to resolve the setColorPromise so the user can see the pixel they selected flash
+    // before the confirmation window pops up.
     setTimeout(async () => {
       if(this.showTransactionApprovalMessages) {
         this.showMessage({ type: TRANSACTION_APPROVAL_PENDING });
       }
-      await setColorPromise;
+      try {
+        await setColorPromise;
+      } catch (error) {
+        // Prevent an uncaught promise rejection error in Brave with an empty catch statement.
+        // The setColorPromise.on('error') handler will take care of the actual error handling.
+      }
     }, 1000);
   };
 
@@ -347,17 +355,20 @@ class Pixie extends React.Component {
       return;
     }
 
-    const accounts = await this.writtableWeb3.eth.getAccounts();
-    const hasAccess = await contract.hasAccess(accounts[0]);
-    if(!hasAccess) {
-      this.showMessage({
-        type: ACCOUNT_NOT_WHITELISTED,
-        data: {
-          web3: this.writtableWeb3,
-          address: accounts[0]
-        }
-      });
-      return;
+    const requiresAccessChecks = await contract.requiresAccessChecks();
+    if(requiresAccessChecks) {
+      const accounts = await this.writtableWeb3.eth.getAccounts();
+      const hasAccess = await contract.hasAccess(accounts[0]);
+      if(!hasAccess) {
+        this.showMessage({
+          type: ACCOUNT_NOT_WHITELISTED,
+          data: {
+            web3: this.writtableWeb3,
+            address: accounts[0]
+          }
+        });
+        return;
+      }
     }
 
     this.setState({
@@ -462,7 +473,7 @@ class Pixie extends React.Component {
         </div>
         { currentMessage &&
           <PopupMessage message={currentMessage}
-            contractAddress={CONTRACT_ADDRESS}
+            contractAddress={this.state.contractAddress}
             onClose={this.hideCurrentMessage} />
         }
       </div>

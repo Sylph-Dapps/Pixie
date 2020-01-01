@@ -6,6 +6,8 @@ contract Pixie {
 
   bool public active = true;
 
+  bool public requiresAccessChecks = true;
+
   mapping(address => bool) public allowedAddresses;
 
   uint8 constant numColumns = 16;
@@ -50,6 +52,14 @@ contract Pixie {
     active = true;
   }
 
+  function enableAccessChecks() public onlyOwner {
+    requiresAccessChecks = true;
+  }
+
+  function disableAccessChecks() public onlyOwner {
+    requiresAccessChecks = false;
+  }
+
   function grantAccess(address account) public onlyOwner {
     allowedAddresses[account] = true;
   }
@@ -72,7 +82,9 @@ contract Pixie {
   }
 
   function setColor(uint8 row, uint8 column, uint24 color) public onlyWhenActive {
-    require(hasAccess(msg.sender), "Address is not allowed to call setColor");
+    if(requiresAccessChecks) {
+      require(hasAccess(msg.sender), "Address is not allowed to call setColor");
+    }
     colors[row * numColumns + column] = color;
 
     emit ColorSetEvent(row, column, color);
