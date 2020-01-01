@@ -20,6 +20,7 @@
     "react-app-polyfill": "^1.0.4",
     "react-dom": "^16.6.3",
     "react-scripts": "3.2.0",
+    "serialize-javascript": "2.1.1",
     "truffle": "5.0.5",
     "web3": "^1.2.1"
   },
