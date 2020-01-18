@@ -125,7 +125,6 @@ html {
     margin: 0 auto 20px auto;
     padding-left: 20px;
     padding-right: 20px;
-    max-width: 510px;
     text-align: center;
 
     .distractor {
@@ -147,8 +146,14 @@ html {
     .editor {
       animation: appear 1s;
 
-      .Board, .Palette {
+      .Board, .CanvasBoard, .Palette {
         margin-bottom: 1em;
+      }
+
+      .Palette {
+        max-width: 490px;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       @media (max-width: 480px) {

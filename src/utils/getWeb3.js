@@ -4,7 +4,7 @@ const USE_INJECTED_GANACHE = false;
 
 const hasWeb3 = () => {
   return window.ethereum || window.web3 || USE_INJECTED_GANACHE;
-}
+};
 
 const getWeb3 = () => {
   const promise = new Promise(async (resolve, reject) => {
@@ -28,8 +28,8 @@ const getWeb3 = () => {
     }
     else if (USE_INJECTED_GANACHE) {
       // Fallback to localhost; use dev console port by default...
-      const provider = new Web3.providers.HttpProvider(
-        "http://localhost:7545"
+      const provider = new Web3.providers.WebsocketProvider(
+        "ws://localhost:7545"
       );
       const web3 = new Web3(provider);
       console.log("No web3 instance injected, using Local web3.");
@@ -45,7 +45,7 @@ const getWeb3 = () => {
 const getViewOnlyWeb3 = async () => {
   let provider;
   if(USE_INJECTED_GANACHE) {
-    provider = new Web3.providers.HttpProvider("http://localhost:7545");
+    provider = new Web3.providers.WebsocketProvider("ws://localhost:7545");
   } else {
     provider = new Web3.providers.WebsocketProvider("wss://ropsten.infura.io/ws/v3/786ade30f36244469480aa5c2bf0743b") // From https://github.com/floating/eth-provider
   }

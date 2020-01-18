@@ -5,6 +5,13 @@ Pixie is a collaborative pixel art project built on Ethereum. Users share a sing
 ### Install dependencies
 `yarn`
 
+### Start ganache-cli (with a 10 second block time)
+`ganache-cli -h 0.0.0.0 -p 7545 -b 10`
+
+### Build and deploy contracts to ganache-cli
+`truffle compile`
+`truffle migrate`
+
 ### Run dev server
 `yarn start` and visit [http://localhost:3000/](http://localhost:3000/)
 

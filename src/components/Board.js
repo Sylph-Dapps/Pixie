@@ -14,11 +14,14 @@ class Board extends React.Component {
     sync('pulse');
   }
 
+  handleCellClick = e => {
+    this.props.onCellClick(e.target.getAttribute("data-i"), e.target.getAttribute("data-j"));
+  }
+
   render() {
     const {
       rows,
       pendingCells,
-      onCellClick,
     } = this.props;
 
     const boardContentStyle = {
@@ -50,8 +53,10 @@ class Board extends React.Component {
 
                   return (
                     <div className="cell"
+                      data-i={i}
+                      data-j={j}
                       key={j}
-                      onClick={() => onCellClick(i, j)}
+                      onClick={this.handleCellClick}
                       style={style}>
                       { nextColor &&
                         <div className="pending-indicator" style={{

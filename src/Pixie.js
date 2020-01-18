@@ -6,7 +6,7 @@ import {
   getViewOnlyWeb3
 } from 'utils/getWeb3';
 import isMobileOrTablet from 'utils/isMobileOrTablet';
-import Board from 'components/Board';
+import CanvasBoard from 'components/CanvasBoard';
 import Palette from 'components/Palette';
 import PopupMessage, {
   ABOUT,
@@ -30,18 +30,27 @@ const LoadingStatus = {
   ERRORED: "ERRORED",
 }
 
-const NUMBER_COLUMNS = 16;
+const NUMBER_COLUMNS = 32;
 
 const PALETTE_COLORS = [
-  '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#000000',
-  '#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#000000',
+  '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#010101',
+  '#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#010101',
   '#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8','#F85898','#F87858','#FCA044','#F8B800','#B8F818','#58D854','#58F898','#00E8D8','#787878',
   '#FCFCFC','#A4E4FC','#B8B8F8','#D8B8F8','#F8B8F8','#F8A4C0','#F0D0B0','#FCE0A8','#F8D878','#D8F878','#B8F8B8','#B8F8D8','#00FCFC','#BCBCBC'
 ];
 
 const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
 
-const intToCSSHex = int => "#" + int.toString(16).padStart(6, "0").toUpperCase();
+const intToCSSHex = int => {
+  // To reduce gas usage when deploying instead of initializing the array of colors to be all white we
+  // leave the colors as all black (0). Then when rendering we map 0 to #ffffff statically. The black
+  // that the user can paint with is not pure black but #010101.
+  if(int === 0) {
+    return "#ffffff";
+  } else {
+    return "#" + int.toString(16).padStart(6, "0").toUpperCase();
+  }
+}
 
 /**
  * Returns an array of arrays of CSS hex strings that represent the grid of colors to draw on the board.
@@ -132,9 +141,10 @@ class Pixie extends React.Component {
       if(event.transactionHash === this.pendingTransactions[row + "," + column]) {
         this.clearPendingCell(row, column);
       }
-    })
+    });
 
     await this.loadColors();
+
     this.setState({
       loadingStatus: LoadingStatus.LOADED,
       contractAddress: this.viewOnlyPixieContract.address,
@@ -148,12 +158,12 @@ class Pixie extends React.Component {
 
     const canvas = document.getElementById('canvas');
     if(canvas) {
-      drawRowsToCanvas(canvas, rows, 10);
+      drawRowsToCanvas(canvas, rows, 5);
     }
 
     const aboutCanvas = document.getElementById('about-canvas');
     if(aboutCanvas) {
-      drawRowsToCanvas(aboutCanvas, rows, 10);
+      drawRowsToCanvas(aboutCanvas, rows, 5);
     }
 
     updateFavicon(rows);
@@ -226,6 +236,8 @@ class Pixie extends React.Component {
   };
 
   paintCell = async (row, column, color) => {
+    this.lastcolor = color;
+
     if(this.state.rows[row][column] === color) {
       this.showMessage({
         type: CELL_ALREADY_DESIRED_COLOR,
@@ -403,7 +415,7 @@ class Pixie extends React.Component {
   };
 
   storeBoardPosition = () => {
-    const boardContent = document.querySelector(".board-content");
+    const boardContent = document.querySelector(".CanvasBoard .board-content");
     if(boardContent) {
       this.previousBoardScrollLeft = boardContent.scrollLeft;
       this.previousBoardScrollTop = boardContent.scrollTop;
@@ -411,7 +423,7 @@ class Pixie extends React.Component {
   };
 
   resetBoardScrollPosition = () => {
-    const boardContent = document.querySelector(".board-content");
+    const boardContent = document.querySelector(".CanvasBoard .board-content");
     if(boardContent) {
       boardContent.scrollLeft = this.previousBoardScrollLeft;
       boardContent.scrollTop = this.previousBoardScrollTop;
@@ -455,9 +467,9 @@ class Pixie extends React.Component {
               }
               { this.state.editing &&
                 <div className="editor">
-                  <Board rows={rows}
+                  <CanvasBoard rows={rows}
                     pendingCells={pendingCells}
-                    onCellClick={(row, column) => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex])} />
+                    onCellClick={(row, column) => setTimeout(() => this.paintCell(row, column, PALETTE_COLORS[selectedColorIndex]), 1)} />
                   <Palette colors={PALETTE_COLORS}
                     selectedColorIndex={selectedColorIndex}
                     onPaletteItemClick={(index) => this.selectColorByIndex(index)}/>

@@ -39,7 +39,11 @@ class PopupMessage extends React.Component {
   renderBrowserRequirementsMessage = () => {
     return (
       <React.Fragment>
-        <p>To paint on Pixie, you need to use a Ethereum-enabled browser. You can turn Chrome and Firefox into Ethereum-enabled browsers by installing the <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a> plugin, and on mobile you can use <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>.
+        <p>
+          To paint on Pixie, you need to use an Ethereum-enabled browser. You can turn Chrome and Firefox into Ethereum-enabled browsers by installing the <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">Metamask</a> plugin. On mobile you can use <a href="https://status.im/get/" target="_blank" rel="noopener noreferrer">Status</a>.
+        </p>
+        <p>
+          You can find a step-by-step guide to getting started with Status <a href="/getting-started-with-status-and-pixie/" target="_blank" rel="noopener noreferrer">here</a>.
         </p>
       </React.Fragment>
     )
@@ -60,7 +64,7 @@ class PopupMessage extends React.Component {
           <Popup title="About Pixie"
             onClose={this.handleClose}>
             <p>Pixie is a collaborative art project that anyone can contribute to!</p>
-            <p>Everyone shares a single 16x16 grid and can paint its cells using the colors from the original NES color palette.</p>
+            <p>Everyone shares a single 32x32 grid and can paint its cells using the colors from the original NES color palette.</p>
             <p>It currently looks like this:</p>
             <p style={{textAlign: 'center'}}>
               <canvas id="about-canvas"/>

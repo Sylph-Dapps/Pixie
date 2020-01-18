@@ -25,7 +25,8 @@ const expectThrow = async promise => {
 
 contract("Pixie", accounts => {
   let pixie;
-  const DEFAULT_COLOR = 0xfcfcfc;
+  //const DEFAULT_COLOR = 0xfcfcfc;
+  const DEFAULT_COLOR = 0;
 
   beforeEach(async () => {
     pixie = await PixieContract.new();
@@ -42,7 +43,7 @@ contract("Pixie", accounts => {
 
   it("returns all colors", async () => {
     const c = await pixie.getAllColors();
-    assert.equal(c.length, 256);
+    assert.equal(c.length, 1024);
     assert.equal(c[0], DEFAULT_COLOR);
   });
 

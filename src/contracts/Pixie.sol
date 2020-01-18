@@ -10,23 +10,24 @@ contract Pixie {
 
   mapping(address => bool) public allowedAddresses;
 
-  uint8 constant numColumns = 16;
-  uint8 constant numRows = 16;
+  uint16 constant numColumns = 32;
+  uint16 constant numRows = 32;
   uint24[numColumns * numRows] public colors;
 
-  event ColorSetEvent(uint8 row, uint8 column, uint24 color);
+  event ColorSetEvent(uint16 row, uint16 column, uint24 color);
 
   constructor() public {
     owner = msg.sender;
     grantAccess(owner);
 
     // Set the initial colors for each pixel
-    for(uint8 i = 0; i < numRows; i++) {
-      for(uint8 j = 0; j < numColumns; j++) {
-        // Do an inline assignment of the colors rather than calling setColor so we don't emit events during initialization
-        colors[i * numColumns + j] = 0xfcfcfc;
-      }
+    /*
+    uint16 total = numRows * numColumns;
+    for(uint16 i = 0; i < total; i++) {
+      // Do an inline assignment of the colors rather than calling setColor so we don't emit events during initialization
+      colors[i] = 0xfcfcfc;
     }
+    */
   }
 
   modifier onlyOwner() {
