@@ -2,6 +2,7 @@ import React from "react";
 import Popup from "components/Popup";
 import SignUpForm from "components/SignUpForm";
 import isMobileOrTablet from 'utils/isMobileOrTablet';
+import { NUMBER_COLUMNS } from 'constants/PixieConstants';
 
 import './PopupMessage.scss';
 
@@ -64,7 +65,7 @@ class PopupMessage extends React.Component {
           <Popup title="About Pixie"
             onClose={this.handleClose}>
             <p>Pixie is a collaborative art project that anyone can contribute to!</p>
-            <p>Everyone shares a single 32x32 grid and can paint its cells using the colors from the original NES color palette.</p>
+            <p>Everyone shares a single {NUMBER_COLUMNS}x{NUMBER_COLUMNS} grid and can paint its cells using the colors from the original NES color palette.</p>
             <p>It currently looks like this:</p>
             <p style={{textAlign: 'center'}}>
               <canvas id="about-canvas"/>

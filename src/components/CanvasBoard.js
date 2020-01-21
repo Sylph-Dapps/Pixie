@@ -1,27 +1,14 @@
 import React from 'react';
 import isMobileOrTablet from 'utils/isMobileOrTablet';
+import {
+  drawCells,
+  drawGrid
+} from 'utils/PixieCanvasUtils';
 import sync from 'utils/css-animation-sync';
 
 import "./CanvasBoard.scss";
 
 const CELL_SIZE = isMobileOrTablet() ? 31 : 25;
-
-const drawRowsToCanvas = (canvas, rows, scaleFactor = 1) => {
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if(rows && rows.length > 0) {
-    canvas.width = rows.length * scaleFactor;
-    canvas.height = rows[0].length * scaleFactor;
-
-    for(let a = 0; a < rows.length; a++) {
-      for(let b = 0; b < rows[a].length; b++) {
-        ctx.fillStyle = rows[a][b];
-        ctx.fillRect(b * scaleFactor, a * scaleFactor, scaleFactor, scaleFactor);
-      }
-    }
-  }
-};
 
 class CanvasBoard extends React.Component {
 
@@ -39,10 +26,6 @@ class CanvasBoard extends React.Component {
     this.props.onCellClick(row, column);
   };
 
-  handleCellClick = e => {
-    this.props.onCellClick(e.target.getAttribute("data-i"), e.target.getAttribute("data-j"));
-  };
-
   componentDidMount() {
     this.redraw();
   }
@@ -56,42 +39,14 @@ class CanvasBoard extends React.Component {
       rows,
     } = this.props;
 
-    
     const canvas = document.getElementById('board-canvas');
-    const scaleFactor = CELL_SIZE;
-    drawRowsToCanvas(canvas, rows, scaleFactor);
-
-    // Draw grid
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if(rows && rows.length > 0) {
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 1;
-
-      ctx.translate(0.5, 0.5);
-      for(let a = 0; a < rows.length; a++) {
-        ctx.beginPath();
-        ctx.moveTo(0, a * scaleFactor);
-        ctx.lineTo(canvas.width, a * scaleFactor);
-        ctx.stroke();
-      }
-      
-      for(let b = 0; b < rows[0].length; b++) {
-        ctx.beginPath();
-        ctx.moveTo(b * scaleFactor, 0);
-        ctx.lineTo(b * scaleFactor, canvas.height);
-        ctx.stroke();
-      }
-
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height - 1);
-      ctx.lineTo(canvas.width, canvas.height - 1);
-      ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.moveTo(canvas.width - 1, 0);
-      ctx.lineTo(canvas.width - 1, canvas.height);
-      ctx.stroke();
-      ctx.translate(-0.5, -0.5);
+      canvas.width = rows[0].length * CELL_SIZE;
+      canvas.height = rows.length * CELL_SIZE;
+      drawCells(canvas, rows, CELL_SIZE);
+      drawGrid(canvas, rows, CELL_SIZE);
     }
   }
 

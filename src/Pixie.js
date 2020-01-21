@@ -1,11 +1,5 @@
 import React from 'react';
 import PixieAbi from 'abis/Pixie.json';
-import {
-  getWeb3,
-  hasWeb3,
-  getViewOnlyWeb3
-} from 'utils/getWeb3';
-import isMobileOrTablet from 'utils/isMobileOrTablet';
 import CanvasBoard from 'components/CanvasBoard';
 import Palette from 'components/Palette';
 import PopupMessage, {
@@ -21,23 +15,24 @@ import PopupMessage, {
   //TRANSACTION_ERROR,
   CELL_ALREADY_DESIRED_COLOR,
 } from 'components/PopupMessage';
+import {
+  getWeb3,
+  hasWeb3,
+  getViewOnlyWeb3
+} from 'utils/getWeb3';
+import isMobileOrTablet from 'utils/isMobileOrTablet';
+import { drawCells } from 'utils/PixieCanvasUtils';
+import {
+  LOADING,
+  LOADED,
+  ERRORED,
+} from 'constants/LoadingStatuses';
+import {
+  NUMBER_COLUMNS,
+  PALETTE_COLORS,
+} from 'constants/PixieConstants';
 
 import './Pixie.scss';
-
-const LoadingStatus = {
-  LOADING: "LOADING",
-  LOADED: "LOADED",
-  ERRORED: "ERRORED",
-}
-
-const NUMBER_COLUMNS = 32;
-
-const PALETTE_COLORS = [
-  '#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#000000',
-  '#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#000000',
-  '#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8','#F85898','#F87858','#FCA044','#F8B800','#B8F818','#58D854','#58F898','#00E8D8','#787878',
-  '#FCFCFC','#A4E4FC','#B8B8F8','#D8B8F8','#F8B8F8','#F8A4C0','#F0D0B0','#FCE0A8','#F8D878','#D8F878','#B8F8B8','#B8F8D8','#00FCFC','#BCBCBC'
-];
 
 const cssHexToInt = cssHex => parseInt(cssHex.replace("#",""), 16);
 
@@ -59,28 +54,22 @@ const colorArrayToRows = colors => {
   return rows;
 };
 
-const updateFavicon = rows => {
-  const canvas = document.createElement('canvas');
-  drawRowsToCanvas(canvas, rows);
-  const favicon = document.getElementById('favicon');
-  favicon.href = canvas.toDataURL('image/png');
-};
-
-const drawRowsToCanvas = (canvas, rows, scaleFactor = 1) => {
+const resetCanvasAndDrawRows = (canvas, rows, scaleFactor = 1) => {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if(rows && rows.length > 0) {
-    canvas.width = rows.length * scaleFactor;
-    canvas.height = rows[0].length * scaleFactor;
-
-    for(let a = 0; a < rows.length; a++) {
-      for(let b = 0; b < rows[a].length; b++) {
-        ctx.fillStyle = rows[a][b];
-        ctx.fillRect(b * scaleFactor, a * scaleFactor, scaleFactor, scaleFactor);
-      }
-    }
+    canvas.width = rows[0].length * scaleFactor;
+    canvas.height = rows.length * scaleFactor;
+    drawCells(canvas, rows, scaleFactor);
   }
+};
+
+const updateFavicon = rows => {
+  const canvas = document.createElement('canvas');
+  resetCanvasAndDrawRows(canvas, rows);
+  const favicon = document.getElementById('favicon');
+  favicon.href = canvas.toDataURL('image/png');
 };
 
 class Pixie extends React.Component {
@@ -94,13 +83,13 @@ class Pixie extends React.Component {
     this.showTransactionSubmittedMessages = true;
 
     // On mobile Metamask the receipt event does not fire and the promise does not resolve when calling setColor,
-    // which means clearPendingCells is never called and the "..." would stay in the cell forever without a workaround.
+    // which means clearPendingCell is never called and the "..." would stay in the cell forever without a workaround.
     // When the transactionhash event fires, we store the hash in this look up and then when the ColorSetEvent fires
-    // on the viewOnlyPixieContract, we check if it's for the transaction in question and call clearPendingCells.
+    // on the viewOnlyPixieContract, we check if it's for the transaction in question and call clearPendingCell.
     this.pendingTransactions = {};
 
     this.state = {
-      loadingStatus: LoadingStatus.LOADING,
+      loadingStatus: LOADING,
       editing: false,
       rows: [[]], // Array of array of hex colors prefixed with #
       selectedColorIndex: 0,
@@ -117,7 +106,7 @@ class Pixie extends React.Component {
     } catch (e) {
       console.error(e);
       this.setState({
-        loadingStatus: LoadingStatus.ERRORED,
+        loadingStatus: ERRORED,
       });
       return;
     }
@@ -137,7 +126,7 @@ class Pixie extends React.Component {
     await this.loadColors();
 
     this.setState({
-      loadingStatus: LoadingStatus.LOADED,
+      loadingStatus: LOADED,
       contractAddress: this.viewOnlyPixieContract.address,
     });
   }
@@ -149,12 +138,12 @@ class Pixie extends React.Component {
 
     const canvas = document.getElementById('canvas');
     if(canvas) {
-      drawRowsToCanvas(canvas, rows, 5);
+      resetCanvasAndDrawRows(canvas, rows, 5);
     }
 
     const aboutCanvas = document.getElementById('about-canvas');
     if(aboutCanvas) {
-      drawRowsToCanvas(aboutCanvas, rows, 5);
+      resetCanvasAndDrawRows(aboutCanvas, rows, 5)
     }
 
     updateFavicon(rows);
@@ -438,13 +427,13 @@ class Pixie extends React.Component {
           <p>By <a href="https://sylphdapps.com">Sylph Dapps</a></p>
         </header>
         <div className="content">
-          { loadingStatus === LoadingStatus.LOADING &&
+          { loadingStatus === LOADING &&
             <div className="distractor">Loading...</div>
           }
-          { loadingStatus === LoadingStatus.ERRORED  &&
+          { loadingStatus === ERRORED  &&
             <div>Unabled to load Pixie :(</div>
           }
-          { loadingStatus === LoadingStatus.LOADED  &&
+          { loadingStatus === LOADED  &&
             <React.Fragment>
               { !this.state.editing &&
                 <div className="viewer">
