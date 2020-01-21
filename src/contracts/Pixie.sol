@@ -4,6 +4,8 @@ contract Pixie {
 
   address public owner;
 
+  bool public initialized = false;
+
   bool public active = true;
 
   bool public requiresAccessChecks = true;
@@ -19,19 +21,20 @@ contract Pixie {
   constructor() public {
     owner = msg.sender;
     grantAccess(owner);
-
-    // Set the initial colors for each pixel
-    /*
-    uint16 total = numRows * numColumns;
-    for(uint16 i = 0; i < total; i++) {
-      // Do an inline assignment of the colors rather than calling setColor so we don't emit events during initialization
-      colors[i] = 0xfcfcfc;
-    }
-    */
   }
 
   modifier onlyOwner() {
     require(msg.sender == owner, "sender must be owner");
+    _;
+  }
+
+  modifier onlyBeforeInitialization() {
+    require(!initialized, "Pixie has already been initialized");
+    _;
+  }
+
+  modifier onlyAfterInitialization() {
+    require(initialized, "Pixie has not been initialized");
     _;
   }
 
@@ -43,6 +46,10 @@ contract Pixie {
   modifier onlyWhenPaused() {
     require(!active, "Pixie is not paused");
     _;
+  }
+
+  function finishInitialization() public onlyOwner {
+    initialized = true;
   }
 
   function pause() public onlyOwner onlyWhenActive {
@@ -74,6 +81,14 @@ contract Pixie {
     return allowedAddresses[account] == true;
   }
 
+  function getNumColumns() public pure returns(uint16 _numColumns) {
+    return numColumns;
+  }
+
+  function getNumRows() public pure returns(uint16 _numRows) {
+    return numRows;
+  }
+
   function getAllColors() public view returns (uint24[numColumns * numRows] memory _colors) {
     return colors;
   }
@@ -82,12 +97,18 @@ contract Pixie {
     return colors[row * numColumns + column];
   }
 
-  function setColor(uint8 row, uint8 column, uint24 color) public onlyWhenActive {
+  function setColor(uint8 row, uint8 column, uint24 color) public onlyWhenActive onlyAfterInitialization {
     if(requiresAccessChecks) {
       require(hasAccess(msg.sender), "Address is not allowed to call setColor");
     }
     colors[row * numColumns + column] = color;
 
     emit ColorSetEvent(row, column, color);
+  }
+
+  function initializeColumn(uint8 column, uint24 color) public onlyOwner onlyBeforeInitialization {
+    for(uint16 i = 0; i < numRows; i++) {
+      colors[i * numColumns + column] = color;
+    }
   }
 }
